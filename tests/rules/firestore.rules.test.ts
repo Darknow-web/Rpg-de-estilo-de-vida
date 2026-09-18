@@ -2,7 +2,7 @@
  * Pruebas explícitas de las reglas de seguridad (emulador de Firestore).
  * Ejecutar con: npm run test:rules
  */
-import { describe, it, beforeAll, afterAll, beforeEach, expect } from 'vitest';
+import { describe, it, beforeAll, afterAll, beforeEach } from 'vitest';
 import { initializeTestEnvironment, assertFails, assertSucceeds, type RulesTestEnvironment } from '@firebase/rules-unit-testing';
 import { doc, setDoc, getDoc, updateDoc, deleteDoc, collection, getDocs } from 'firebase/firestore';
 import fs from 'node:fs';
