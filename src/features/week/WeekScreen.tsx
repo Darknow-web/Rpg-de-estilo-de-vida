@@ -1,59 +1,102 @@
+import { useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
 import { useGameContext } from '@/state/game';
 import { buildWeek } from '@/core/missions/schedule';
 import { WEEKDAY_LABELS, weekdayOf, minutesToHuman } from '@/lib/time';
+import { Card, Label, Notice, Row, ATTR_ICON, ATTR_VAR } from '@/components/ui/primitives';
+import { AgendaScreen } from '@/modules/calendar/ui/AgendaScreen';
+import { Icon } from '@/components/ui/Icon';
 
-/** Semana: cuadrícula de 7 días con la carga de cada uno, para detectar días saturados. */
+/** Semana: pestañas Carga (7 columnas, día saturado) y Agenda (Google Calendar). */
 export function WeekScreen() {
   const ctx = useGameContext();
+  const [sel, setSel] = useState<string | null>(null);
+  const [tab, setTab] = useState<'carga' | 'agenda'>('carga');
   if (!ctx) return null;
+  if (tab === 'agenda')
+    return (
+      <div className="screen" style={{ '--tint': 'var(--color-system)' } as CSSProperties}>
+        <div className="head center">
+          <span className="title">Semana</span>
+        </div>
+        <Tabs tab={tab} setTab={setTab} />
+        <AgendaScreen embedded />
+      </div>
+    );
   const week = buildWeek(ctx.missions, ctx.completions, ctx.today);
   const maxMin = Math.max(30, ...week.map((d) => d.minutes));
   const declared = ctx.player.interview?.answers.q4_time;
   const budget = declared === '15' ? 15 : declared === '30' ? 30 : declared === '60' ? 60 : 90;
+  const over = week.filter((d) => d.minutes > budget);
+  const selected = week.find((d) => d.day === (sel ?? ctx.today)) ?? week[0];
   return (
-    <div className="space-y-4 animate-fadein">
-      <div>
-        <h1 className="font-display text-xl text-gold">Tu semana</h1>
-        <p className="text-xs text-mist">Carga por día. Si un día se pasa de tu tiempo declarado ({budget} min), se marca antes de que te mate.</p>
+    <div className="screen" style={{ '--tint': 'var(--color-xp)' } as CSSProperties}>
+      <div className="head center">
+        <span className="title">Semana</span>
       </div>
-      <div className="grid grid-cols-7 gap-1">
-        {week.map((d) => {
-          const over = d.minutes > budget;
-          const isToday = d.day === ctx.today;
-          return (
-            <div key={d.day} className={`flex flex-col items-center rounded-xl border p-1.5 ${isToday ? 'border-gold' : 'border-steel'} bg-void`}>
-              <div className="text-[10px] text-mist">{WEEKDAY_LABELS[weekdayOf(d.day)]}</div>
-              <div className={`text-sm ${isToday ? 'text-gold' : 'text-parchment'}`}>{Number(d.day.slice(8))}</div>
-              <div className="mt-1 flex h-16 w-3 items-end overflow-hidden rounded bg-steel">
-                <div className={`w-full ${over ? 'bg-ember' : 'bg-arcane'}`} style={{ height: `${Math.round((d.minutes / maxMin) * 100)}%` }} />
+      <Tabs tab={tab} setTab={setTab} />
+      <Label right={`Tu tiempo: ${budget} min/día`}>Carga por día</Label>
+      <Card>
+        <div className="weekbars">
+          {week.map((d) => {
+            const isOver = d.minutes > budget;
+            const isToday = d.day === ctx.today;
+            return (
+              <button key={d.day} type="button" className={`wb ${isToday ? 'today' : ''} ${isOver ? 'over' : ''}`} style={{ outline: selected.day === d.day && !isToday ? '1px solid var(--color-track)' : undefined }} onClick={() => setSel(d.day)}>
+                <span className="d">{WEEKDAY_LABELS[weekdayOf(d.day)].slice(0, 2)}</span>
+                <span className="col">
+                  <i style={{ height: `${Math.round((d.minutes / maxMin) * 100)}%` }} />
+                </span>
+                <span className="m num">{d.minutes}′</span>
+                <span className="s num" style={{ margin: 0, fontSize: 10 }}>
+                  {d.done}/{d.missions.length}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </Card>
+      {over.length > 0 && (
+        <Notice tone="danger" icon="timer">
+          {over.length === 1 ? `El ${WEEKDAY_LABELS[weekdayOf(over[0].day)]} se pasa de tu tiempo declarado (${over[0].minutes} de ${budget} min).` : `${over.length} días se pasan de tu tiempo declarado.`} Mueve o baja una misión antes de que te mate.
+        </Notice>
+      )}
+      <Label right={minutesToHuman(selected.minutes)}>
+        {WEEKDAY_LABELS[weekdayOf(selected.day)]} {selected.day.slice(8)}
+        {selected.day === ctx.today ? ' · hoy' : ''}
+      </Label>
+      <Card tone="tight">
+        <div className="list">
+          {selected.missions.map((m) => (
+            <Row key={m.id} icon={m.moduleId === 'gym' ? 'dumbbell' : ATTR_ICON[m.attribute]} color={ATTR_VAR[m.attribute]} title={m.name} sub={m.schedule.window === 'allDay' ? 'Todo el día' : `${m.schedule.window.start} – ${m.schedule.window.end} · ${m.estimatedMinutes} min`} to={`/missions/${m.id}`} chevron />
+          ))}
+          {selected.missions.length === 0 && (
+            <div className="row">
+              <div className="grow s" style={{ margin: 0 }}>
+                Descanso. Cuenta como día limpio.
               </div>
-              <div className={`mt-1 text-[10px] ${over ? 'text-ember' : 'text-mist'}`}>{d.minutes}m</div>
-              <div className="text-[10px] text-mist">{d.done}/{d.missions.length}</div>
             </div>
-          );
-        })}
-      </div>
-      <div className="space-y-2">
-        {week.map((d) => (
-          <div key={d.day} className="rounded-xl bg-void p-3">
-            <div className="flex items-center justify-between text-xs text-mist">
-              <span>{WEEKDAY_LABELS[weekdayOf(d.day)]} {d.day.slice(5)}</span>
-              <span>{minutesToHuman(d.minutes)}</span>
-            </div>
-            <ul className="mt-1 space-y-0.5 text-sm">
-              {d.missions.map((m) => (
-                <li key={m.id}>
-                  <Link to={`/missions/${m.id}`} className="text-parchment">
-                    {m.schedule.window === 'allDay' ? 'Todo el día' : m.schedule.window.start} · {m.name}
-                  </Link>
-                </li>
-              ))}
-              {d.missions.length === 0 && <li className="text-mist">Descanso</li>}
-            </ul>
-          </div>
-        ))}
-      </div>
+          )}
+        </div>
+      </Card>
+      <Link to="/missions/new" className="chip ghost self-end">
+        Agregar misión
+      </Link>
+    </div>
+  );
+}
+
+function Tabs({ tab, setTab }: { tab: 'carga' | 'agenda'; setTab: (t: 'carga' | 'agenda') => void }) {
+  return (
+    <div className="grid grid-cols-2 gap-1.5">
+      <button className={`chip ${tab === 'carga' ? '' : 'ghost'}`} style={{ '--c': 'var(--color-xp)', height: 36, justifyContent: 'center' } as CSSProperties} onClick={() => setTab('carga')}>
+        <Icon id="cal" />
+        Carga
+      </button>
+      <button className={`chip ${tab === 'agenda' ? '' : 'ghost'}`} style={{ '--c': 'var(--color-system)', height: 36, justifyContent: 'center' } as CSSProperties} onClick={() => setTab('agenda')}>
+        <Icon id="timer" />
+        Agenda
+      </button>
     </div>
   );
 }

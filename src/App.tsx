@@ -21,7 +21,9 @@ import { CampaignScreen } from '@/features/character/CampaignScreen';
 import { LongTermScreen } from '@/features/missions/LongTermScreen';
 import { GymScreen } from '@/modules/gym/ui/GymScreen';
 import { GymSession } from '@/modules/gym/ui/GymSession';
+import { AgendaScreen } from '@/modules/calendar/ui/AgendaScreen';
 import { FeedbackOverlay } from '@/components/FeedbackOverlay';
+import { IconSprite } from '@/components/ui/Icon';
 import { CatchupBanner } from '@/features/today/CatchupBanner';
 import { runCatchup, type CatchupSummary } from '@/core/catchup/catchup';
 import { setClockOffset } from '@/lib/time';
@@ -100,14 +102,21 @@ export default function App() {
 
   if (!firebaseConfigured) return <ConfigMissing />;
   if (!authReady) return <Splash label="Despertando…" />;
-  if (!user) return <AuthScreen />;
+  if (!user)
+    return (
+      <>
+        <IconSprite />
+        <AuthScreen />
+      </>
+    );
   if (!playerLoaded || !player) return <Splash label="Abriendo tu hoja de personaje…" />;
   if (!player.flags.onboardingDone && !location.pathname.startsWith('/onboarding')) return <Navigate to="/onboarding" replace />;
 
   return (
     <>
+      <IconSprite />
       {clockWarn && (
-        <div className="bg-blood/30 px-4 py-2 text-center text-xs text-parchment">La hora de tu dispositivo difiere de la del servidor. Las misiones se registran igual, pero quedarán marcadas.</div>
+        <div className="px-4 py-2 text-center text-xs text-dim" style={{ background: 'rgba(255,59,92,.18)' }}>La hora de tu dispositivo difiere de la del servidor. Las misiones se registran igual, pero quedarán marcadas.</div>
       )}
       <Routes>
         <Route path="/onboarding" element={<Onboarding />} />
@@ -125,6 +134,7 @@ export default function App() {
           <Route path="/missions/:id/gallery" element={<GalleryScreen />} />
           <Route path="/gym" element={<GymScreen />} />
           <Route path="/gym/session/:missionId" element={<GymSession />} />
+          <Route path="/agenda" element={<AgendaScreen />} />
           <Route path="/settings" element={<SettingsScreen />} />
           <Route path="/log" element={<SystemLogScreen />} />
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -138,9 +148,9 @@ export default function App() {
 
 function Splash({ label }: { label: string }) {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-abyss">
-      <div className="font-display text-3xl text-gold animate-pulse-slow">LIFE QUEST</div>
-      <div className="text-sm text-mist">{label}</div>
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-bg">
+      <div className="text-2xl font-extrabold uppercase tracking-[.14em] animate-pulse-slow">Life Quest</div>
+      <div className="text-sm text-dim">{label}</div>
     </div>
   );
 }
@@ -148,9 +158,9 @@ function Splash({ label }: { label: string }) {
 function ConfigMissing() {
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 p-6 text-center">
-      <div className="font-display text-3xl text-gold">LIFE QUEST</div>
-      <p className="max-w-md text-sm text-mist">
-        Falta la configuración de Firebase. Copia <code className="text-parchment">.env.example</code> a <code className="text-parchment">.env</code> y completa las variables <code className="text-parchment">VITE_FIREBASE_*</code> (ver README).
+      <div className="text-2xl font-extrabold uppercase tracking-[.14em]">Life Quest</div>
+      <p className="max-w-md text-sm text-dim">
+        Falta la configuración de Firebase. Copia <code className="text-ink">.env.example</code> a <code className="text-ink">.env</code> y completa las variables <code className="text-ink">VITE_FIREBASE_*</code> (ver README).
       </p>
     </div>
   );

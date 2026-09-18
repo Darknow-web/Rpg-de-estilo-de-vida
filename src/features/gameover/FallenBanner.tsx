@@ -1,5 +1,6 @@
 import { useGameContext } from '@/state/game';
 import { daysBetween } from '@/lib/time';
+import { Bar, IconSquare, Label } from '@/components/ui/primitives';
 
 /** Estado caído: pantalla de derrota clara y seria, nunca humillante. Siempre con salida visible. */
 export function FallenBanner() {
@@ -9,21 +10,27 @@ export function FallenBanner() {
   const daysLeft = q ? Math.max(0, daysBetween(ctx.today, q.deadline)) : 0;
   const why = ctx.player.interview?.answers.q2_why;
   return (
-    <div className="mx-4 mt-3 rounded-2xl border border-blood/60 bg-blood/10 p-4">
-      <div className="font-display text-lg text-blood">Has caído</div>
-      <p className="mt-1 text-sm text-parchment">Sin corazones no ganas XP ni monedas y la tienda está cerrada. Pero hay una salida, y es corta.</p>
-      {q && (
-        <div className="mt-3 rounded-xl bg-void p-3">
-          <div className="text-xs uppercase tracking-widest text-mist">Misión de resurrección</div>
-          <div className="mt-1 font-semibold">{q.missionName}</div>
-          <div className="mt-1 text-sm text-mist">Cúmplela {q.daysRequired} días seguidos con foto. Progreso: <span className="text-gold">{q.daysDone}/{q.daysRequired}</span> · Plazo: {daysLeft} día{daysLeft === 1 ? '' : 's'}.</div>
-          <div className="bar mt-2">
-            <div className="bg-life" style={{ width: `${Math.round((q.daysDone / q.daysRequired) * 100)}%` }} />
+    <div className="mx-4 mt-4 card danger">
+      <div className="row">
+        <IconSquare icon="skull" color="var(--color-hp)" />
+        <div className="grow">
+          <div className="t" style={{ color: 'var(--color-hp)' }}>
+            Has caído
           </div>
-          <p className="mt-2 text-xs text-mist">Si el plazo vence, revives igual perdiendo la mitad de tus monedas. Nunca tu XP, tus habilidades ni tu historial.</p>
+          <div className="s">Sin corazones no ganas XP ni monedas y la tienda está cerrada. Hay una salida, y es corta.</div>
+        </div>
+      </div>
+      {q && (
+        <div className="mt-4 rounded-2xl bg-card-2 p-3">
+          <Label right={`${daysLeft} día${daysLeft === 1 ? '' : 's'} de plazo`}>Misión de resurrección</Label>
+          <div className="t mt-2" style={{ fontSize: 14 }}>
+            {q.missionName}
+          </div>
+          <Bar className="mt-3" value={q.daysDone} max={q.daysRequired} color="var(--color-xp)" label={`${q.daysRequired} días seguidos con foto`} right={`${q.daysDone}/${q.daysRequired}`} />
+          <p className="s mt-3">Si el plazo vence, revives igual perdiendo la mitad de tus monedas. Nunca tu XP, tus habilidades ni tu historial.</p>
         </div>
       )}
-      {why && <p className="mt-3 text-xs italic text-mist">Dijiste que esto importaba porque: "{why}"</p>}
+      {why && <p className="s mt-3 italic">Dijiste que esto importaba porque: "{why}"</p>}
     </div>
   );
 }

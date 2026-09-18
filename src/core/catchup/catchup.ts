@@ -29,6 +29,8 @@ export interface CatchupSummary {
   revivedByExpiry: boolean;
   restBonusActivated: boolean;
   interestEarned: number;
+  /** Compromisos de agenda (stakes 'none') vencidos sin foto: sin daño ni racha, solo el contador de puntualidad. */
+  commitmentsMissed: { missionName: string; day: string }[];
   events: FeedbackEvent[];
   /** true si hubo algo que mostrar. */
   hasNews: boolean;
@@ -64,6 +66,7 @@ export async function runCatchup(ctx: GameContext): Promise<CatchupSummary> {
     revivedByExpiry: false,
     restBonusActivated: false,
     interestEarned: 0,
+    commitmentsMissed: [],
     events: [],
     hasNews: false,
   };
@@ -135,6 +138,21 @@ export async function runCatchup(ctx: GameContext): Promise<CatchupSummary> {
       if (completionKeys.has(key) || failureKeys.has(key)) continue;
       if (!expiredFor(m, day, ctx)) {
         allExpired = false;
+        continue;
+      }
+      // ── Sin apuestas (compromiso de agenda): no hay daño ni racha; se anota, se archiva y sigue ──
+      if (m.stakes === 'none') {
+        const failure: Failure = { id: newId('f'), missionId: m.id, day, heartsLost: 0, forgivenBy: 'noStakes', createdAt: nowIso() };
+        b.set(subDoc(ctx.uid, 'failures', failure.id), clean(failure));
+        failureKeys.add(key);
+        const pct = (player.stats.punctuality ??= { onTime: 0, early: 0, missed: 0 });
+        pct.missed += 1;
+        missionUpdates.set(m.id, { ...(missionUpdates.get(m.id) ?? {}), active: false, archivedAt: nowIso() });
+        summary.commitmentsMissed.push({ missionName: m.name, day });
+        logInBatch(b, ctx.uid, buildLogEntry('commitment_missed', `"${m.name}" (${day}) venció sin foto. Los compromisos de agenda no quitan corazones ni rompen la racha: solo suma 1 al contador de puntualidad (${pct.missed} sin cumplir). La misión se archiva.`));
+        writes++;
+        const cmod = getModule(m.moduleId);
+        if (cmod?.onMissionFailed) void cmod.onMissionFailed(m.id, day).catch(() => undefined);
         continue;
       }
       // ── Falla ──
@@ -211,7 +229,8 @@ export async function runCatchup(ctx: GameContext): Promise<CatchupSummary> {
 
       // Racha
       if (!paused) {
-        const scheduledCount = scheduled.length;
+        // Los compromisos de agenda (sin apuestas) no cuentan ni a favor ni en contra de la racha.
+        const scheduledCount = scheduled.filter((m) => m.stakes !== 'none').length;
         if (impossible || restDay) {
           // conserva
         } else if (dayHadUnforgivenFail) {
@@ -303,6 +322,6 @@ export async function runCatchup(ctx: GameContext): Promise<CatchupSummary> {
   }
 
   summary.streakNow = player.streak.current;
-  summary.hasNews = summary.failuresApplied.length > 0 || summary.heartsRegenerated > 0 || summary.restBonusActivated || summary.died || summary.revivedByExpiry || summary.interestEarned > 0;
+  summary.hasNews = summary.failuresApplied.length > 0 || summary.commitmentsMissed.length > 0 || summary.heartsRegenerated > 0 || summary.restBonusActivated || summary.died || summary.revivedByExpiry || summary.interestEarned > 0;
   return summary;
 }

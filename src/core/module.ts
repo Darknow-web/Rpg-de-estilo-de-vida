@@ -3,7 +3,7 @@
  * Ningún módulo escribe XP, monedas ni corazones. Todo pasa por completeMission() y awardRewards().
  */
 import type { LazyExoticComponent, ComponentType } from 'react';
-import type { AttributeId, Difficulty, MissionSchedule, MissionType, ModuleId, MinimalVersion, Mission, Player } from '@/shared/types';
+import type { AttributeId, Difficulty, MissionSchedule, MissionStakes, MissionType, ModuleId, MinimalVersion, Mission, Player } from '@/shared/types';
 
 export interface MissionTemplate {
   moduleId: ModuleId;
@@ -17,6 +17,8 @@ export interface MissionTemplate {
   minimalVersion: MinimalVersion;
   anchor?: string;
   evidenceHint?: string;
+  /** Ausente = 'normal'. 'none' para compromisos de agenda (fallar no quita corazones). */
+  stakes?: MissionStakes;
   moduleData?: Record<string, unknown>;
   /** Identidad estable para que el módulo pueda actualizar en vez de duplicar. */
   externalKey?: string;

@@ -26,6 +26,13 @@ export function planDay(missions: Mission[], doneMissionIds: Set<string>, day: s
     if (w === 'allDay') continue;
     if (doneMissionIds.has(m.id)) continue;
     const open = zonedTimeToUtc(day, w.start, tz);
+    if (m.origin === 'calendar') {
+      // Compromisos de agenda: un solo aviso al abrir la ventana ("Sale en 60 min"); no hay aviso de cierre.
+      const lead = Math.max(0, parseHHmm(w.end) - parseHHmm(w.start));
+      const summary = String(m.moduleData?.eventSummary ?? m.name.replace(/^Llegar a tiempo: /, ''));
+      if (open > now) candidates.push({ id: `${m.id}:${day}:open`, at: open, title: `Sale en ${lead} min: ${summary}`, body: `Empieza a las ${w.end}. Llega antes y toma la foto del lugar.`, url: '/', kind: 'open', missionId: m.id });
+      continue;
+    }
     const closeMin = parseHHmm(w.end) - NOTIFICATIONS.closingWarningMinutes;
     const closing = zonedTimeToUtc(day, formatHHmm(Math.max(0, closeMin)), tz);
     if (open > now) candidates.push({ id: `${m.id}:${day}:open`, at: open, title: 'Ventana abierta', body: `${m.name} · hasta las ${w.end}`, url: '/', kind: 'open', missionId: m.id });

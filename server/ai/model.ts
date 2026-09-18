@@ -48,19 +48,27 @@ export class AiError extends Error {
  * Una llamada estructurada: system prompt + entrada → JSON validado con Zod.
  * Nunca lanza sin `kind`: el que llama decide si usa fallback.
  */
+export type InlineImage = { mimeType: 'image/jpeg' | 'image/png' | 'image/webp'; data: string };
+
 export async function structuredCall<T extends z.ZodType>(opts: {
   system: string;
   user: string;
   schema: T;
   temperature?: number;
   maxOutputTokens?: number;
+  /** Imágenes en base64 (sin prefijo `data:`). Van como `inlineData` ANTES del texto. */
+  images?: InlineImage[];
 }): Promise<z.infer<T>> {
   if (!aiAvailable()) throw new AiError('GEMINI_API_KEY ausente', 'unavailable');
   let text: string | undefined;
   try {
+    const parts = [
+      ...(opts.images ?? []).map((img) => ({ inlineData: { mimeType: img.mimeType, data: img.data } })),
+      { text: opts.user },
+    ];
     const res = await getClient().models.generateContent({
       model: MODEL_ID,
-      contents: [{ role: 'user', parts: [{ text: opts.user }] }],
+      contents: [{ role: 'user', parts }],
       config: {
         systemInstruction: opts.system,
         responseMimeType: 'application/json',

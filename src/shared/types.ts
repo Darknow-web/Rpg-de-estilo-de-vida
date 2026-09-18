@@ -13,9 +13,11 @@ export type RankId = 'D' | 'C' | 'B' | 'A' | 'S';
 export type Difficulty = 'easy' | 'medium' | 'hard' | 'epic';
 export type MissionType = 'daily' | 'weekly' | 'main' | 'side' | 'boss' | 'hidden';
 export type MasteryState = 'new' | 'progress' | 'consolidated' | 'mastered' | 'automated';
-export type ModuleId = 'habits' | 'gym';
+export type ModuleId = 'habits' | 'gym' | 'calendar';
 export type PlayerStatus = 'alive' | 'fallen' | 'paused';
-export type MissionOrigin = 'onboarding' | 'ai-proposal' | 'player' | 'escalation' | 'resurrection' | 'gym' | 'fallback';
+export type MissionOrigin = 'onboarding' | 'ai-proposal' | 'player' | 'escalation' | 'resurrection' | 'gym' | 'fallback' | 'calendar';
+/** Qué se arriesga al fallar: 'normal' = corazones y racha; 'none' = solo el contador de puntualidad (compromisos de agenda). */
+export type MissionStakes = 'normal' | 'none';
 
 /** Ventana horaria en hora local del jugador ("HH:mm"). */
 export interface TimeWindow {
@@ -81,8 +83,14 @@ export interface Mission {
   hiddenCondition?: { kind: string; params: Record<string, unknown> };
   revealed?: boolean;
   moduleId: ModuleId;
+  /**
+   * Datos propios del módulo. Para misiones de agenda (origin 'calendar'):
+   * `{ eventId, calendarId, eventStart: ISO, eventSummary }`.
+   */
   moduleData?: Record<string, unknown>;
   origin: MissionOrigin;
+  /** Ausente = 'normal'. Con 'none' fallar no quita corazones ni toca la racha. */
+  stakes?: MissionStakes;
   /** Ancla del método Tiny Habits ("después de lavarme los dientes…"). */
   anchor?: string;
   evidenceHint?: string;
@@ -194,8 +202,16 @@ export interface Player {
     missionsCompleted: number;
     evidenceBytes: number;
     chainsCompleted: number;
+    /** Puntualidad (compromisos de agenda): llegadas a tiempo, de ellas cuántas con adelanto, y fallos. */
+    punctuality?: PunctualityStats;
   };
   schemaVersion: number;
+}
+
+export interface PunctualityStats {
+  onTime: number;
+  early: number;
+  missed: number;
 }
 
 export interface CampaignExplanation {
@@ -228,7 +244,7 @@ export interface Failure {
   missionId: string;
   day: string;
   heartsLost: number;
-  forgivenBy?: 'skill' | 'impossibleDay' | 'restDay' | 'mastered' | 'pause' | 'skill-strength';
+  forgivenBy?: 'skill' | 'impossibleDay' | 'restDay' | 'mastered' | 'pause' | 'skill-strength' | 'noStakes';
   createdAt: string;
 }
 
@@ -290,7 +306,7 @@ export interface SystemLogEntry {
 
 export interface Medal {
   id: string;
-  kind: 'mastered' | 'automated' | 'chain' | 'boss' | 'rank' | 'resurrection' | 'main';
+  kind: 'mastered' | 'automated' | 'chain' | 'boss' | 'rank' | 'resurrection' | 'main' | 'punctual';
   title: string;
   missionId?: string;
   chainId?: string;

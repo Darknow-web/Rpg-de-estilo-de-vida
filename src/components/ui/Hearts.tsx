@@ -1,11 +1,11 @@
-export function Hearts({ current, max, size = 'md' }: { current: number; max: number; size?: 'md' | 'lg' }) {
-  const cls = size === 'lg' ? 'text-2xl' : 'text-base';
+/** Corazones SVG: llenos en rojo, vacíos en el color de la pista. */
+export function Hearts({ current, max, size = 'md', beat }: { current: number; max: number; size?: 'md' | 'lg'; beat?: boolean }) {
   return (
-    <div className={`flex items-center gap-0.5 ${cls}`} aria-label={`${current} de ${max} corazones`}>
+    <div className={`hearts ${size === 'lg' ? 'lg' : ''}`} aria-label={`${current} de ${max} corazones`} role="img">
       {Array.from({ length: max }).map((_, i) => (
-        <span key={i} className={i < current ? 'text-blood drop-shadow-[0_0_6px_rgba(215,38,61,0.7)]' : 'text-ash'}>
-          {i < current ? '♥' : '♡'}
-        </span>
+        <svg key={i} className={beat && i >= current ? 'beat' : undefined} style={{ color: i < current ? 'var(--color-hp)' : 'var(--color-track)' }}>
+          <use href="#heart" />
+        </svg>
       ))}
     </div>
   );

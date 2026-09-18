@@ -33,6 +33,7 @@ export function buildMission(t: MissionTemplate, origin: MissionOrigin, today: s
     moduleId: t.moduleId,
     moduleData: t.moduleData ? { ...t.moduleData, externalKey: t.externalKey } : t.externalKey ? { externalKey: t.externalKey } : undefined,
     origin,
+    stakes: t.stakes,
     anchor: t.anchor,
     evidenceHint: t.evidenceHint,
     active: true,

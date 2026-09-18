@@ -20,7 +20,8 @@ export function countMastered(missions: Mission[]): number {
 
 export function activeOfType(missions: Mission[], type: MissionType): Mission[] {
   // Las automatizadas salen de la bitácora: no ocupan cupo.
-  return missions.filter((m) => m.active && m.type === type && m.mastery.state !== 'automated' && (m.type !== 'hidden' || m.revealed));
+  // Los compromisos de agenda (origin 'calendar') tienen su propio tope diario (PUNCTUALITY.maxPerDay) y no gastan cupo.
+  return missions.filter((m) => m.active && m.type === type && m.mastery.state !== 'automated' && (m.type !== 'hidden' || m.revealed) && m.origin !== 'calendar');
 }
 
 export function quotaFor(type: MissionType, player: Player, missions: Mission[], effects: ActiveEffects): QuotaInfo {

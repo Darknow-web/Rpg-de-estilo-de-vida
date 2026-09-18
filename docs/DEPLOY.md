@@ -43,7 +43,22 @@ npx web-push generate-vapid-keys
 ```
 Agrega `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT=mailto:tu-correo` (servidor) y `VITE_VAPID_PUBLIC_KEY` (cliente). Sin estas variables, la app usa solo avisos locales mientras está abierta.
 
-## 6. Desplegar a Cloud Run
+## 6. Google Calendar (gratis)
+
+El módulo **Agenda** lee tu Google Calendar en modo **solo lectura** con Google Identity Services, directamente desde el navegador. No hace falta facturación ni verificación de la app: basta con dejar la pantalla de consentimiento en modo *Testing* y registrarte como tester.
+
+1. **Habilitar la API:** [console.cloud.google.com](https://console.cloud.google.com) → selecciona el proyecto que creó Firebase/AI Studio → **APIs y servicios → Biblioteca** → busca **Google Calendar API** → **Habilitar**.
+2. **Pantalla de consentimiento OAuth:** **APIs y servicios → Pantalla de consentimiento OAuth** (o *Google Auth Platform → Público*). Tipo de usuario **Externo**, estado de publicación **Testing** (en pruebas). En **Usuarios de prueba** añade el correo del jugador (el mismo con el que inicia sesión). Con la app en Testing no necesitas verificación de Google; el permiso dura hasta que lo revoques, con un aviso de "app no verificada" que se acepta una vez.
+3. **Orígenes autorizados:** **APIs y servicios → Credenciales** → abre el cliente OAuth 2.0 de tipo *Aplicación web* que Firebase creó automáticamente (suele llamarse *Web client (auto created by Google Service)*). En **Orígenes de JavaScript autorizados** añade:
+   - `http://localhost:5173`
+   - la URL de tu servicio en Cloud Run (`https://<servicio>.run.app`)
+   No hace falta ningún *URI de redirección*: el modelo de token de GIS usa una ventana emergente.
+4. **Client ID:** copia el **ID de cliente** (termina en `.apps.googleusercontent.com`) a la variable `VITE_GOOGLE_CLIENT_ID` (`.env` en local; variables de entorno del app en AI Studio para Cloud Run). Es una variable pública del cliente, no un secreto.
+5. En la app: **Agenda → Conectar Google Calendar** → elige tu cuenta → acepta el permiso de solo lectura. Aparecen los eventos de los próximos 14 días; marca uno como compromiso para crear la misión *Llegar a tiempo*.
+
+**Privacidad:** los datos del calendario **nunca pasan por el servidor de Life Quest ni por Firestore**. El token de acceso vive solo en la memoria de la pestaña; la lista de eventos se guarda en el `localStorage` del dispositivo (clave `lq-calendar`) y se borra al desconectar. En Firestore solo queda la misión que tú marcas (nombre del evento, hora de inicio e identificador del evento).
+
+## 7. Desplegar a Cloud Run
 
 1. En AI Studio, botón **Deploy** (arriba a la derecha) → **Deploy to Cloud Run**.
 2. AI Studio construye la imagen con el `Dockerfile` del repo (o con buildpacks: `npm run build` + `npm start`), inyecta los secretos y publica una URL `https://<servicio>.run.app`.
@@ -52,6 +67,6 @@ Agrega `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT=mailto:tu-correo`
 
 Cada vez que cambies código: `git push` → AI Studio → GitHub → **Pull** → **Deploy** de nuevo.
 
-## 7. Costos
+## 8. Costos
 
-Todo cabe en la capa Starter (2 apps, sin tarjeta): Cloud Run, Auth, Firestore (1 GiB, 50k lecturas/día, 40k escrituras/día, 10 GiB egreso/mes) y la cuota gratuita de Gemini. Lo único que exigiría facturación es Cloud Storage (sección 3), que esta app evita.
+Todo cabe en la capa Starter (2 apps, sin tarjeta): Cloud Run, Auth, Firestore (1 GiB, 50k lecturas/día, 40k escrituras/día, 10 GiB egreso/mes), la cuota gratuita de Gemini y la Google Calendar API (gratuita, 1 000 000 de consultas/día). Lo único que exigiría facturación es Cloud Storage (sección 3), que esta app evita.

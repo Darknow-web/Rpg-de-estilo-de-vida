@@ -1,3 +1,4 @@
+import type { CSSProperties } from 'react';
 import { useGame, useGameContext } from '@/state/game';
 import { undoImpossibleDay } from '@/core/streaks/streaks';
 import { markUndone } from '@/lib/systemLog';
@@ -5,6 +6,7 @@ import { applyRepricing } from '@/core/shop/shop';
 import { restoreMission } from '@/core/missions/manage';
 import { batch, commitSoon, subDoc, clean } from '@/core/repo';
 import type { Mission } from '@/shared/types';
+import { Card, EmptyState, IconSquare, PageHead } from '@/components/ui/primitives';
 
 /** "Qué hizo el sistema y por qué": toda acción automática es auditable y, cuando se puede, reversible. */
 export function SystemLogScreen() {
@@ -31,26 +33,35 @@ export function SystemLogScreen() {
   };
 
   return (
-    <div className="space-y-3 animate-fadein">
-      <div>
-        <h1 className="font-display text-xl text-gold">Historial del sistema</h1>
-        <p className="text-xs text-mist">Todo lo que la app hizo sola, con su razón. Lo reversible se puede deshacer aquí.</p>
-      </div>
-      {log.length === 0 && <p className="text-sm text-mist">Aún no hay acciones automáticas.</p>}
+    <div className="screen" style={{ '--tint': 'var(--color-system)' } as CSSProperties}>
+      <PageHead title="Historial del sistema" />
+      <p className="s" style={{ margin: 0 }}>
+        Todo lo que la app hizo sola, con su razón. Lo reversible se puede deshacer aquí.
+      </p>
+      {log.length === 0 && <EmptyState icon="history" title="Aún no hay acciones automáticas" />}
       {log.map((e) => (
-        <div key={e.id} className="rounded-xl bg-void p-3 text-sm">
-          <div className="flex items-center justify-between text-[11px] text-mist">
-            <span>{ACTION_LABEL[e.action] ?? e.action}</span>
-            <span>{new Date(e.at).toLocaleString('es', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+        <Card key={e.id}>
+          <div className="row" style={{ alignItems: 'flex-start' }}>
+            <IconSquare icon="spark" color="var(--color-system)" size="sm" />
+            <div className="grow">
+              <div className="row" style={{ justifyContent: 'space-between' }}>
+                <span className="t" style={{ fontSize: 14 }}>
+                  {ACTION_LABEL[e.action] ?? e.action}
+                </span>
+                <span className="s num" style={{ margin: 0 }}>
+                  {new Date(e.at).toLocaleString('es', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
+              <div className="s">{e.reason}</div>
+              {e.reversible && !e.undoneAt && (
+                <button className="btn ghost sm auto mt-3" onClick={() => undo(e.id, e.action, e.undoPayload)}>
+                  Deshacer
+                </button>
+              )}
+              {e.undoneAt && <div className="s mt-1">Deshecho</div>}
+            </div>
           </div>
-          <div className="mt-1 text-parchment">{e.reason}</div>
-          {e.reversible && !e.undoneAt && (
-            <button className="btn btn-ghost btn-sm mt-2" onClick={() => undo(e.id, e.action, e.undoPayload)}>
-              Deshacer
-            </button>
-          )}
-          {e.undoneAt && <div className="mt-1 text-[11px] text-mist">Deshecho</div>}
-        </div>
+        </Card>
       ))}
     </div>
   );
@@ -101,4 +112,6 @@ const ACTION_LABEL: Record<string, string> = {
   gym_routine: 'Rutina de gimnasio',
   evidence_archived: 'Evidencias archivadas',
   day_close: 'Cierre del día',
+  commitment_missed: 'Compromiso no registrado',
+  medal_punctual: 'Medalla Puntual',
 };

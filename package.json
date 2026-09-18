@@ -20,7 +20,8 @@
     "test:watch": "vitest",
     "test:rules": "firebase emulators:exec --only firestore --project demo-life-quest \"vitest run tests/rules\"",
     "preview": "npm run build && npm start",
-    "e2e": "node tests/e2e/smoke.mjs"
+    "e2e": "node tests/e2e/smoke.mjs",
+    "art": "node scripts/optimize-art.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.30.0",
@@ -49,6 +50,8 @@
     "esbuild": "^0.25.0",
     "firebase-tools": "^14.0.0",
     "jsdom": "^26.1.0",
+    "playwright-core": "^1.63.0",
+    "sharp": "^0.35.4",
     "tailwindcss": "^4.1.0",
     "tsx": "^4.20.0",
     "typescript": "^5.9.0",

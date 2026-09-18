@@ -3,6 +3,7 @@
  * y en el cliente (tipos). Si la IA no cumple el esquema, se usa el fallback local.
  */
 import { z } from 'zod';
+import { GYM_EQUIPMENT_IDS } from '../gymEquipmentIds';
 
 export const attributeSchema = z.enum(['fuerza', 'disciplina', 'intelecto', 'riqueza', 'vitalidad']);
 export const classIdSchema = z.enum(['guerrero', 'erudito', 'asceta', 'mercader', 'sanador', 'vagabundo']);
@@ -217,3 +218,28 @@ export type AvailabilityOutput = z.infer<typeof availabilityOutputSchema>;
 export const availabilityInputSchema = z.object({
   text: z.string().min(3).max(1000),
 });
+
+// ── Escaneo de gimnasio: fotos → equipamiento del catálogo ──
+/** Fotos en base64 (sin prefijo `data:`). El cliente las deja en ≤ 200 KB cada una (~267k caracteres). */
+export const gymScanInputSchema = z.object({
+  images: z.array(z.string().min(100).max(300_000)).min(1).max(4),
+});
+export type GymScanInput = z.infer<typeof gymScanInputSchema>;
+
+export const gymEquipmentIdSchema = z.enum(GYM_EQUIPMENT_IDS);
+export const scanConfidenceSchema = z.enum(['alta', 'media', 'baja']);
+
+export const gymScanOutputSchema = z.object({
+  equipos: z
+    .array(
+      z.object({
+        id: gymEquipmentIdSchema,
+        confianza: scanConfidenceSchema,
+        detalle: z.string().max(80).optional(),
+      }),
+    )
+    .max(30),
+  noReconocido: z.array(z.string().max(60)).max(8),
+  espacioLibre: z.boolean(),
+});
+export type GymScanOutput = z.infer<typeof gymScanOutputSchema>;

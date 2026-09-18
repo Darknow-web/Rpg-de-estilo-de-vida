@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { Icon } from '@/components/ui/Icon';
 
 interface SpeechRecognitionLike {
   lang: string;
@@ -54,8 +55,9 @@ export function VoiceInput({ value, onChange, placeholder, rows = 3 }: { value: 
     <div>
       <textarea className="input" rows={rows} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} />
       {supported && (
-        <button type="button" className={`btn btn-sm mt-2 ${listening ? 'btn-ember' : 'btn-ghost'}`} onClick={toggle}>
-          {listening ? '● Escuchando… toca para parar' : '🎙 Dictar'}
+        <button type="button" className={`btn sm mt-2 ${listening ? 'ember' : 'ghost'}`} onClick={toggle}>
+          <Icon id="mic" />
+          {listening ? 'Escuchando… toca para parar' : 'Dictar'}
         </button>
       )}
     </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGameContext } from '@/state/game';
 import { quotaFor } from '@/core/missions/quota';
@@ -9,6 +9,8 @@ import { ATTRIBUTE_IDS, type AttributeId, type Difficulty, type MissionType } fr
 import { WEEKDAY_LABELS } from '@/lib/time';
 import { DIFFICULTY_LABEL, TYPE_LABEL } from '@/core/missions/factory';
 import { rankForLevel } from '@/lib/game-balance';
+import { Icon } from '@/components/ui/Icon';
+import { ATTR_ICON, ATTR_VAR, Card, IconSquare, Label, Notice, PageHead } from '@/components/ui/primitives';
 
 /**
  * Crear misión: primero la PROPUESTA (un toque). El formulario manual está detrás de "modo avanzado"
@@ -47,64 +49,73 @@ export function MissionCreate() {
   };
 
   return (
-    <div className="space-y-4 animate-fadein">
-      <div>
-        <button className="text-xs text-mist" onClick={() => navigate(-1)}>
-          ← Volver
-        </button>
-        <h1 className="font-display text-xl text-gold">Nueva misión</h1>
-      </div>
-      <div className="flex flex-wrap gap-1">
+    <div className="screen" style={{ '--tint': 'var(--color-system)' } as CSSProperties}>
+      <PageHead title="Nueva misión" />
+      <div className="flex flex-wrap gap-1.5">
         {unlockedTypes.map((t) => (
-          <button key={t} className={`chip ${type === t ? 'chip-active' : ''}`} onClick={() => setType(t)}>
+          <button key={t} className={`chip ${type === t ? '' : 'ghost'}`} style={{ '--c': 'var(--color-system)', height: 32, fontSize: 12.5 } as CSSProperties} onClick={() => setType(t)}>
             {TYPE_LABEL[t]}
           </button>
         ))}
       </div>
-      <div className="text-xs text-mist">
-        Cupo {TYPE_LABEL[type].toLowerCase()}: {quota.used}/{quota.max}
-      </div>
+      <Label right={`${quota.used}/${quota.max}`}>Cupo {TYPE_LABEL[type].toLowerCase()}</Label>
       {!quota.allowed && (
-        <div className="panel p-4 text-sm">
-          <div className="font-semibold text-parchment">Bitácora llena</div>
-          <p className="mt-1 text-mist">{quota.reason}</p>
-          {quota.nextUnlock && <p className="mt-1 text-xs text-arcane-glow">{quota.nextUnlock}</p>}
-          <p className="mt-2 text-xs text-mist">Empezar pequeño es obligatorio: 3 a 5 misiones al inicio. El cupo se gana jugando, no configurando.</p>
-        </div>
+        <Card>
+          <div className="row">
+            <IconSquare icon="book" color="var(--color-dim)" />
+            <div className="grow">
+              <div className="t">Bitácora llena</div>
+              <div className="s">{quota.reason}</div>
+            </div>
+          </div>
+          {quota.nextUnlock && <div className="s mt-3" style={{ color: 'var(--color-system)' }}>{quota.nextUnlock}</div>}
+          <div className="s mt-2">Empezar pequeño es obligatorio: 3 a 5 misiones al inicio. El cupo se gana jugando, no configurando.</div>
+        </Card>
       )}
       {quota.allowed && type === 'daily' && !manual && (
-        <div className="panel p-4">
-          <div className="text-sm text-parchment">Deja que el Maestro de Juego proponga la siguiente misión a partir de tu meta y lo que ya dominas.</div>
+        <Card tone="sys">
+          <div className="row">
+            <IconSquare icon="spark" color="var(--color-system)" />
+            <div className="grow s" style={{ margin: 0 }}>
+              Deja que el Sistema proponga la siguiente misión a partir de tu meta y lo que ya dominas.
+            </div>
+          </div>
           {!sug ? (
-            <button className="btn btn-primary mt-3 w-full" onClick={propose} disabled={busy}>
+            <button className="btn system mt-4" onClick={propose} disabled={busy}>
               {busy ? 'Pensando…' : 'Proponme una misión'}
             </button>
           ) : (
-            <div className="mt-3 rounded-xl bg-void p-3 text-sm">
-              <div className="text-[11px]" style={{ color: ATTRIBUTE_META[sug.template.attribute].color }}>
-                {ATTRIBUTE_META[sug.template.attribute].icon} {ATTRIBUTE_META[sug.template.attribute].name} · {DIFFICULTY_LABEL[sug.template.difficulty]} · {sug.template.estimatedMinutes} min
+            <div className="mt-4 rounded-2xl bg-card-2 p-3">
+              <div className="row">
+                <IconSquare icon={ATTR_ICON[sug.template.attribute]} color={ATTR_VAR[sug.template.attribute]} size="sm" />
+                <div className="grow">
+                  <div className="t" style={{ fontSize: 14 }}>
+                    {sug.template.name}
+                  </div>
+                  <div className="s">
+                    {ATTRIBUTE_META[sug.template.attribute].name} · {DIFFICULTY_LABEL[sug.template.difficulty]} · {sug.template.estimatedMinutes} min
+                  </div>
+                </div>
               </div>
-              <div className="font-semibold text-parchment">{sug.template.name}</div>
-              <div className="text-mist">{sug.template.description}</div>
-              <div className="mt-2 text-xs text-parchment">
-                <span className="text-mist">Por qué: </span>
-                {sug.reason}
+              <div className="s mt-2">{sug.template.description}</div>
+              <div className="s mt-2">
+                <b style={{ color: 'var(--color-ink)' }}>Por qué:</b> {sug.reason}
               </div>
-              {err && <div className="mt-2 text-xs text-ember">{err}</div>}
+              {err && <div className="s mt-2" style={{ color: 'var(--color-ember)' }}>{err}</div>}
               <div className="mt-3 flex gap-2">
-                <button className="btn btn-primary btn-sm flex-1" onClick={accept}>
+                <button className="btn system sm" onClick={accept}>
                   Aceptar
                 </button>
-                <button className="btn btn-ghost btn-sm" onClick={propose} disabled={busy}>
+                <button className="btn ghost sm auto" onClick={propose} disabled={busy}>
                   Otra
                 </button>
               </div>
             </div>
           )}
-          <button className="mt-3 w-full text-center text-xs text-mist underline" onClick={() => setManual(true)}>
+          <button className="mt-3 w-full text-center text-xs text-mute underline" onClick={() => setManual(true)}>
             Prefiero escribirla yo
           </button>
-        </div>
+        </Card>
       )}
       {quota.allowed && (manual || type !== 'daily') && <ManualForm type={type} onDone={() => navigate('/')} />}
     </div>
@@ -161,27 +172,28 @@ function ManualForm({ type, onDone }: { type: MissionType; onDone: () => void })
   };
 
   return (
-    <div className="panel space-y-3 p-4 text-sm">
+    <Card className="space-y-3 text-sm">
       <input className="input" placeholder="Nombre (mínimo viable: 'leer 2 páginas', no 'leer 30 min')" value={name} onChange={(e) => setName(e.target.value)} />
       <textarea className="input" rows={2} placeholder="Descripción (opcional)" value={description} onChange={(e) => setDescription(e.target.value)} />
       {(type === 'daily' || type === 'weekly') && <input className="input" placeholder="Ancla: después de… (algo que ya haces todos los días)" value={anchor} onChange={(e) => setAnchor(e.target.value)} />}
-      <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap gap-1.5">
         {ATTRIBUTE_IDS.map((a) => (
-          <button key={a} className={`chip ${attribute === a ? 'chip-active' : ''}`} onClick={() => setAttribute(a)} style={attribute === a ? { borderColor: ATTRIBUTE_META[a].color } : undefined}>
-            {ATTRIBUTE_META[a].icon} {ATTRIBUTE_META[a].name}
+          <button key={a} className={`chip ${attribute === a ? '' : 'ghost'}`} style={{ '--c': ATTR_VAR[a], height: 32 } as CSSProperties} onClick={() => setAttribute(a)}>
+            <Icon id={ATTR_ICON[a]} />
+            {ATTRIBUTE_META[a].name}
           </button>
         ))}
       </div>
       {type === 'daily' && (
         <>
-          <div className="flex flex-wrap gap-1">
+          <div className="flex flex-wrap gap-1.5">
             {WEEKDAY_LABELS.map((l, d) => (
-              <button key={d} className={`chip ${days.includes(d) ? 'chip-active' : ''}`} onClick={() => toggleDay(d)}>
+              <button key={d} className={`chip ${days.includes(d) ? '' : 'ghost'}`} style={{ '--c': 'var(--color-xp)' } as CSSProperties} onClick={() => toggleDay(d)}>
                 {l}
               </button>
             ))}
           </div>
-          <label className="flex items-center gap-2 text-xs text-mist">
+          <label className="row text-xs text-dim" style={{ gap: 8 }}>
             <input type="checkbox" checked={allDay} onChange={(e) => setAllDay(e.target.checked)} /> Todo el día
           </label>
           {!allDay && (
@@ -193,20 +205,20 @@ function ManualForm({ type, onDone }: { type: MissionType; onDone: () => void })
         </>
       )}
       {type === 'weekly' && (
-        <label className="block text-xs text-mist">
+        <label className="block text-xs text-dim">
           Veces por semana
           <input type="number" min={1} max={6} className="input mt-1" value={times} onChange={(e) => setTimes(Number(e.target.value))} />
         </label>
       )}
       {(type === 'main' || type === 'boss') && <textarea className="input" rows={4} placeholder={type === 'main' ? 'Hitos (uno por línea, 3 a 5)' : 'Subtareas (una por línea, 3 a 10). Una sola oportunidad.'} value={items} onChange={(e) => setItems(e.target.value)} />}
       {(type === 'side' || type === 'boss') && (
-        <label className="block text-xs text-mist">
+        <label className="block text-xs text-dim">
           Fecha límite (opcional)
           <input type="date" className="input mt-1" value={once} onChange={(e) => setOnce(e.target.value)} />
         </label>
       )}
       {(adv || type === 'side') && type !== 'boss' && type !== 'main' && (
-        <label className="block text-xs text-mist">
+        <label className="block text-xs text-dim">
           Dificultad
           <select className="input mt-1" value={difficulty} onChange={(e) => setDifficulty(e.target.value as Difficulty)}>
             {(['easy', 'medium', 'hard', 'epic'] as Difficulty[]).map((d) => (
@@ -217,15 +229,16 @@ function ManualForm({ type, onDone }: { type: MissionType; onDone: () => void })
           </select>
         </label>
       )}
-      <label className="block text-xs text-mist">
+      <label className="block text-xs text-dim">
         Duración estimada (min)
         <input type="number" min={1} className="input mt-1" value={minutes} onChange={(e) => setMinutes(Number(e.target.value))} />
       </label>
-      {err && <div className="text-xs text-ember">{err}</div>}
-      {warn && <div className="text-xs text-gold">{warn}</div>}
-      <button className="btn btn-primary w-full" onClick={save}>
+      {err && <Notice tone="danger">{err}</Notice>}
+      {warn && <Notice tone="gold">{warn}</Notice>}
+      <button className="btn system" onClick={save}>
+        <Icon id="plus" />
         Crear
       </button>
-    </div>
+    </Card>
   );
 }

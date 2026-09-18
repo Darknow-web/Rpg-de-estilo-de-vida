@@ -16,7 +16,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', true);
-app.use(express.json({ limit: '256kb' }));
+const jsonSmall = express.json({ limit: '256kb' });
+// /api/ai/gym-scan lleva hasta 4 fotos en base64: usa su propio parser (límite mayor) dentro del router.
+app.use((req, res, next) => (req.path === '/api/ai/gym-scan' ? next() : jsonSmall(req, res, next)));
 
 app.get('/api/health', (_req, res) => {
   res.json({

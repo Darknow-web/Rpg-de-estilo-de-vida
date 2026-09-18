@@ -3,7 +3,7 @@
  * Abrir cámara → foto → guardar → recompensa. Sin foto no hay misión completada.
  */
 import type { Completion, Medal, Mission, Player } from '@/shared/types';
-import { XP, COINS, MASTERY } from '@/lib/game-balance';
+import { XP, COINS, MASTERY, PUNCTUALITY } from '@/lib/game-balance';
 import { newId, nowIso } from '@/lib/ids';
 import { batch, commitSoon, playerRef, subDoc, clean } from '@/core/repo';
 import { evidenceStorage, prepareEvidence } from '@/lib/storage';
@@ -22,6 +22,12 @@ export interface CompleteResult {
   error?: string;
   completion?: Completion;
   events: FeedbackEvent[];
+  /** Solo misiones de agenda: true si llegó ≥ PUNCTUALITY.earlyMinutes antes del evento (XP ×(1+earlyBonus)). */
+  early?: boolean;
+  /** Solo misiones de agenda: minutos de adelanto respecto al inicio del evento (negativo si llegó después). */
+  minutesEarly?: number;
+  /** Solo misiones de agenda: contador de puntualidad tras esta completación. */
+  punctuality?: Player['stats']['punctuality'];
 }
 
 export interface EvidenceInput {
@@ -102,6 +108,21 @@ export async function completeMission(ctx: GameContext, missionId: string, evide
     coinMult *= COINS.EARLY_BIRD.multiplier;
     bonuses.push('madrugador');
   }
+  // ── Puntualidad (misiones de agenda): bonus por adelanto ANTES de awardRewards, que sigue siendo la única puerta ──
+  const isCalendar = mission.origin === 'calendar';
+  let early: boolean | undefined;
+  let minutesEarly: number | undefined;
+  if (isCalendar) {
+    const eventStart = Date.parse(String(mission.moduleData?.eventStart ?? ''));
+    if (Number.isFinite(eventStart)) {
+      minutesEarly = Math.floor((eventStart - ctx.now.getTime()) / 60_000);
+      early = status === 'onTime' && minutesEarly >= PUNCTUALITY.earlyMinutes;
+      if (early) {
+        xpMult *= 1 + PUNCTUALITY.earlyBonus;
+        bonuses.push('con adelanto');
+      }
+    }
+  }
   const clockSuspect = Math.abs(ctx.now.getTime() - Date.now()) > 10 * 60_000;
 
   // ── Recompensa ──
@@ -144,6 +165,23 @@ export async function completeMission(ctx: GameContext, missionId: string, evide
   }
   player.stats.missionsCompleted += 1;
   player.streak.lastActiveDay = today;
+
+  // ── Contador de puntualidad y medallas Puntual ──
+  if (isCalendar) {
+    const pct = (player.stats.punctuality ??= { onTime: 0, early: 0, missed: 0 });
+    if (status === 'onTime') {
+      pct.onTime += 1;
+      if (early) pct.early += 1;
+      const tier = (PUNCTUALITY.medalCounts as readonly number[]).indexOf(pct.onTime);
+      if (tier >= 0) {
+        const count = PUNCTUALITY.medalCounts[tier];
+        const medal: Medal = { id: `punctual_${count}`, kind: 'punctual', title: `Puntual (${PUNCTUAL_TIER_NAMES[tier] ?? 'oro'})`, awardedAt: nowIso() };
+        b.set(subDoc(ctx.uid, 'medals', medal.id), medal);
+        events.push({ kind: 'medal', title: medal.title });
+        logInBatch(b, ctx.uid, buildLogEntry('medal_punctual', `Llegaste a tiempo a ${count} compromisos: medalla "${medal.title}". La puntualidad también sube de nivel.`));
+      }
+    }
+  }
 
   // ── Dominio (solo diarias) ──
   const missionUpdate: Partial<Mission> = {};
@@ -253,8 +291,10 @@ export async function completeMission(ctx: GameContext, missionId: string, evide
     void mod.onMissionCompleted({ missionId, completionId, day, status, evidenceId, mission }).catch((e) => console.warn('[module] onMissionCompleted', e));
   }
 
-  return { ok: true, completion, events };
+  return { ok: true, completion, events, early, minutesEarly, punctuality: isCalendar ? player.stats.punctuality : undefined };
 }
+
+const PUNCTUAL_TIER_NAMES = ['bronce', 'plata', 'oro'] as const;
 
 /** Anular una completación: queda anotada, nunca se borra. No devuelve la XP ni las monedas al jugador (se registra como anulada). */
 export async function annulCompletion(ctx: GameContext, completionId: string, reason: string): Promise<void> {

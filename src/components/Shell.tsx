@@ -1,9 +1,10 @@
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useGame, useGameContext } from '@/state/game';
-import { TopBar } from './TopBar';
 import { FallenBanner } from '@/features/gameover/FallenBanner';
 import { rankIndex } from '@/lib/game-balance';
+import { Icon, type IconId } from './ui/Icon';
 
+/** Marco de la app: contenido + dock inferior de iconos (sin etiquetas, punto bajo el activo). */
 export function Shell() {
   const ctx = useGameContext();
   const online = useGame((s) => s.online);
@@ -15,31 +16,29 @@ export function Shell() {
   const showGym = p.flags.unlockedViews.includes('gym') || location.pathname.startsWith('/gym');
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-lg flex-col">
-      <TopBar />
-      {!online && <div className="bg-steel px-4 py-1 text-center text-[11px] text-mist">Sin conexión: tus misiones y fotos se guardan y se sincronizan al volver.</div>}
+    <div className="mx-auto flex min-h-screen w-full max-w-lg flex-col tinted">
+      {!online && <div className="px-4 py-1 text-center text-[11px] text-dim">Sin conexión: tus misiones y fotos se guardan y se sincronizan al volver.</div>}
       {p.status === 'fallen' && <FallenBanner />}
-      <main className="flex-1 px-4 pt-3 safe-bottom">
+      <main className="flex-1 px-4 safe-bottom">
         <Outlet />
       </main>
-      <nav className="fixed inset-x-0 bottom-0 z-30 mx-auto flex w-full max-w-lg items-stretch justify-around border-t border-steel bg-void/95 backdrop-blur" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
-        <Tab to="/" icon="🗡️" label="Hoy" />
-        {showWeek && <Tab to="/week" icon="📅" label="Semana" />}
-        <Tab to="/character" icon="🧬" label="Personaje" />
-        {showSkills && <Tab to="/skills" icon="🌳" label="Árbol" badge={p.level.skillPointsAvailable} />}
-        {showGym && <Tab to="/gym" icon="🏋️" label="Gym" />}
-        <Tab to="/shop" icon="🏪" label="Tienda" />
+      <nav className="dock" aria-label="Navegación">
+        <Tab to="/" icon="home" label="Hoy" />
+        {showWeek && <Tab to="/week" icon="cal" label="Semana" />}
+        <Tab to="/character" icon="user" label="Personaje" />
+        {showSkills && <Tab to="/skills" icon="tree" label="Árbol" badge={p.level.skillPointsAvailable} />}
+        {showGym && <Tab to="/gym" icon="dumbbell" label="Gimnasio" />}
+        <Tab to="/shop" icon="store" label="Tienda" />
       </nav>
     </div>
   );
 }
 
-function Tab({ to, icon, label, badge }: { to: string; icon: string; label: string; badge?: number }) {
+function Tab({ to, icon, label, badge }: { to: string; icon: IconId; label: string; badge?: number }) {
   return (
-    <NavLink to={to} end={to === '/'} className={({ isActive }) => `relative flex min-w-[56px] flex-1 flex-col items-center gap-0.5 py-2 text-[11px] ${isActive ? 'text-gold' : 'text-mist'}`}>
-      <span className="text-xl leading-none">{icon}</span>
-      <span>{label}</span>
-      {badge ? <span className="absolute right-2 top-1 rounded-full bg-ember px-1.5 text-[10px] font-bold text-white">{badge}</span> : null}
+    <NavLink to={to} end={to === '/'} className={({ isActive }) => (isActive ? 'on' : '')} aria-label={label} title={label}>
+      <Icon id={icon} />
+      {badge ? <span className="n" aria-label={`${badge} pendientes`} /> : null}
     </NavLink>
   );
 }

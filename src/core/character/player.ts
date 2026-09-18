@@ -44,7 +44,7 @@ export function createInitialPlayer(uid: string, displayName: string, timezone: 
       unlockedViews: [],
     },
     campaign: null,
-    stats: { rewardsUnderpriced: 0, missionsCompleted: 0, evidenceBytes: 0, chainsCompleted: 0 },
+    stats: { rewardsUnderpriced: 0, missionsCompleted: 0, evidenceBytes: 0, chainsCompleted: 0, punctuality: { onTime: 0, early: 0, missed: 0 } },
     schemaVersion: PLAYER_SCHEMA_VERSION,
   };
 }

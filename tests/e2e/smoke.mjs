@@ -21,6 +21,7 @@ page.on('pageerror', (e) => logs.push(`[pageerror] ${e.message}`));
 let step = 0;
 const shot = async (name) => {
   step++;
+  await page.waitForTimeout(900); // deja terminar la cascada de entrada (≤ 0,6 s)
   await page.screenshot({ path: path.join(OUT, `${String(step).padStart(2, '0')}-${name}.png`) });
 };
 const fail = (msg) => {
@@ -43,34 +44,38 @@ try {
   await shot('q1');
   const t0 = Date.now();
   await page.locator('textarea').fill('Correr 10 km sin parar y sentirme fuerte');
-  await page.getByRole('button', { name: 'Siguiente' }).click();
+  await page.getByRole('button', { name: 'Continuar' }).click();
   await page.locator('textarea').fill('Porque quiero tener energía para mi familia');
-  await page.getByRole('button', { name: 'Siguiente' }).click();
+  await page.getByRole('button', { name: 'Continuar' }).click();
   await page.getByText('Apps de hábitos').click();
-  await page.getByRole('button', { name: 'Siguiente' }).click();
-  await page.getByRole('button', { name: '30 minutos' }).click();
-  await page.getByRole('button', { name: 'Siguiente' }).click();
-  await page.getByRole('button', { name: 'Mañana' }).click();
-  await page.getByRole('button', { name: 'Siguiente' }).click();
-  await page.getByRole('button', { name: 'No ver resultados' }).click();
-  await page.getByRole('button', { name: 'Siguiente' }).click();
+  await page.getByRole('button', { name: 'Continuar' }).click();
+  await page.getByRole('button', { name: /30 minutos/ }).click();
+  await page.getByRole('button', { name: 'Continuar' }).click();
+  await page.getByRole('button', { name: /Mañana/ }).click();
+  await page.getByRole('button', { name: 'Continuar' }).click();
+  await page.getByRole('button', { name: /No ver resultados/ }).click();
+  await page.getByRole('button', { name: 'Continuar' }).click();
   await page.locator('textarea').fill('me lavo los dientes, tomo café');
-  await page.getByRole('button', { name: 'Siguiente' }).click();
+  await page.getByRole('button', { name: 'Continuar' }).click();
   await page.locator('textarea').fill('una siesta, unas zapatillas, un viaje');
   await page.getByRole('button', { name: 'Crear mi personaje' }).click();
   const interviewSeconds = (Date.now() - t0) / 1000;
 
-  await page.getByText('Esto es lo que proponemos').waitFor({ timeout: 90000 });
+  // Alerta del Sistema → campaña
+  await page.getByRole('button', { name: 'Ver mi campaña' }).waitFor({ timeout: 90000 });
+  await shot('system-alert');
+  await page.getByRole('button', { name: 'Ver mi campaña' }).click();
+  await page.getByText('Clase asignada').waitFor({ timeout: 20000 });
   await shot('campaign');
-  const classText = await page.locator('.font-display.text-lg').first().innerText();
-  const dailyCount = await page.locator('section', { hasText: '3 misiones diarias' }).locator('.rounded-xl.bg-void').count();
-  if (dailyCount !== 3) fail(`esperaba 3 misiones diarias, hay ${dailyCount}`);
+  const classText = await page.locator('.medallion + div').first().innerText();
+  const dailyCount = await page.getByText(/misiones diarias$/).count();
+  if (dailyCount !== 1) fail(`no se encontró la sección de misiones diarias (${dailyCount})`);
   await page.getByRole('button', { name: /Aceptar y empezar/ }).click();
 
   // Hoy
-  await page.getByText('Bitácora de hoy').waitFor({ timeout: 20000 });
+  await page.getByText(/^Buen(os|as) (días|tardes|noches),$/).waitFor({ timeout: 20000 });
   await shot('today');
-  const cards = page.locator('.panel', { hasText: 'Foto y completar' });
+  const cards = page.locator('.card', { hasText: 'Foto y completar' });
   const n = await cards.count();
   if (n < 1) fail('no hay misiones completables hoy');
 
@@ -82,38 +87,48 @@ try {
   await input.setInputFiles(tmp);
   await page.getByText(/\+\d+ XP/).first().waitFor({ timeout: 20000 });
   await shot('reward');
-  await page.waitForTimeout(2200);
-  const done = await page.locator('.line-through').count();
+  await page.waitForTimeout(2600);
+  const done = await page.getByText('Hecha', { exact: true }).count();
   if (done < 1) fail('la misión no quedó marcada como hecha');
-  const coins = await page.locator('header').innerText();
+  const coins = await page.locator('.card').first().innerText();
   await shot('today-after');
 
   // Personaje
-  await page.getByRole('link', { name: /Personaje/ }).click();
-  await page.getByText('Próximo desbloqueo').waitFor();
+  await page.getByRole('link', { name: 'Personaje' }).click();
+  await page.getByText(/Camino a|El rango final/).waitFor();
   await shot('character');
-  const levelText = await page.locator('header').innerText();
+  const levelText = await page.locator('.card').first().innerText();
 
   // Tienda + tasador local
-  await page.getByRole('link', { name: /Tienda/ }).click();
-  await page.getByText('Tienda').first().waitFor();
-  await page.waitForFunction(() => document.querySelectorAll('button.panel').length >= 4, null, { timeout: 15000 }).catch(() => null);
-  const rewardsCount = await page.locator('button.panel').count();
+  await page.getByRole('link', { name: 'Tienda' }).click();
+  await page.getByText('Tienda', { exact: true }).first().waitFor();
+  await page.waitForFunction(() => document.querySelectorAll('.list > button.row').length >= 4, null, { timeout: 15000 }).catch(() => null);
+  const rewardsCount = await page.locator('.list > button.row').count();
   if (rewardsCount < 4) fail(`tienda con ${rewardsCount} recompensas (< 4)`);
   await shot('shop');
   await page.getByRole('button', { name: /Recompensa propia/ }).click();
   await page.getByPlaceholder(/canjear/).fill('Pizza y cerveza');
   await page.getByRole('button', { name: 'Tasar' }).click();
   await page.getByText(/^Tasación (con IA|local)$/).waitFor({ timeout: 30000 });
+  await page.waitForTimeout(1500);
   await shot('appraisal');
-  const apText = await page.locator('.rounded-xl.bg-void').first().innerText();
+  const apText = await page.locator('.card.sys').first().innerText();
   await page.getByRole('button', { name: 'Guardar en la tienda' }).click();
   await page.waitForTimeout(800);
 
   // Árbol (aparece al tener puntos)
-  await page.getByRole('link', { name: /Árbol/ }).click().catch(() => null);
+  await page.getByRole('link', { name: 'Árbol' }).click().catch(() => null);
   await page.waitForTimeout(500);
   await shot('skills');
+  await page.goto(`${BASE}/week`);
+  await page.waitForTimeout(800);
+  await shot('week');
+  await page.getByRole('button', { name: 'Agenda' }).click().catch(() => null);
+  await page.waitForTimeout(500);
+  await shot('agenda');
+  await page.goto(`${BASE}/gym`);
+  await page.waitForTimeout(800);
+  await shot('gym');
 
   // Cerrar sesión y entrar con otra cuenta: no ve nada
   await page.goto(`${BASE}/settings`);

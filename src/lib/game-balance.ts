@@ -293,6 +293,12 @@ export const EVIDENCE = {
   quotaBytes: 1_073_741_824,
 } as const;
 export const TIME = { clockSkewWarnMinutes: 10 } as const;
+/**
+ * Puntualidad (compromisos de la agenda): la misión "Llegar a tiempo" abre `windowMinutes` antes del
+ * evento y cierra a la hora del evento. Llegar `earlyMinutes` o más antes da +`earlyBonus` de XP.
+ * Máximo `maxPerDay` compromisos por día; medallas Puntual (bronce/plata/oro) al acumular `medalCounts` llegadas a tiempo.
+ */
+export const PUNCTUALITY = { windowMinutes: 60, earlyMinutes: 10, earlyBonus: 0.5, maxPerDay: 3, medalCounts: [10, 30, 100] as const } as const;
 export const ONBOARDING = { maxRegenerations: 3, dailyMissions: 3 } as const;
 
 // ─────────────────────────────────────────────────────────────────────────────

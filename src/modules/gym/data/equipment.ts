@@ -2,10 +2,13 @@
  * Catálogo de equipamiento y presets por tipo de gimnasio.
  * El jugador ELIGE de una lista típica primero; agregar máquinas una por una es la última opción.
  */
+import type { GymEquipmentId } from '@/shared/gymEquipmentIds';
+
 export type GymType = 'barrio' | 'cadena' | 'casa';
 
 export interface EquipmentDef {
-  id: string;
+  /** Debe existir en `GYM_EQUIPMENT_IDS` (shared): es el enum que la IA puede devolver al escanear fotos. */
+  id: GymEquipmentId;
   name: string;
   category: 'libre' | 'maquina' | 'cardio' | 'accesorio' | 'cuerpo';
 }

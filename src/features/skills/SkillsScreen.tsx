@@ -1,15 +1,50 @@
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { useGameContext } from '@/state/game';
 import { SKILL_TREE, type SkillNode } from '@/lib/game-balance';
 import { SKILL_TEXTS, BRANCH_TEXTS } from '@/data/skillTree';
 import { nodeStatus, unlockNode, resetTree } from '@/core/skills/unlock';
 import { Sheet } from '@/components/ui/Sheet';
-import { ATTRIBUTE_META } from '@/core/character/classes';
 import type { AttributeId } from '@/shared/types';
+import { Icon, type IconId } from '@/components/ui/Icon';
+import { ATTR_ICON, ATTR_VAR, Card, Chip, Label, Notice, Pill } from '@/components/ui/primitives';
 
-const BRANCHES: (SkillNode['branch'])[] = ['trunk', 'fuerza', 'disciplina', 'intelecto', 'riqueza', 'vitalidad'];
+const BRANCHES: SkillNode['branch'][] = ['trunk', 'fuerza', 'disciplina', 'intelecto', 'riqueza', 'vitalidad'];
 
-/** Árbol de habilidades: todos los nodos visibles desde el inicio. Cada nodo cambia una regla. */
+/** Icono por nodo: por nombre clave, con respaldo por rama. */
+const NODE_ICON: Record<string, IconId> = {
+  corazon_extra_1: 'vital',
+  corazon_extra_2: 'vital',
+  segunda_oportunidad: 'shield',
+  bitacora_ampliada_1: 'book',
+  bitacora_ampliada_2: 'book',
+  gracia_extendida: 'timer',
+  dia_imposible_extra: 'cal',
+  madrugador: 'flame',
+  resistencia: 'shield',
+  deportista: 'body',
+  cuerpo_templado: 'dumbbell',
+  sesion_doble: 'zap',
+  racha_de_hierro: 'flame',
+  cierre_del_dia: 'check',
+  ventana_flexible: 'timer',
+  cadena_maestra: 'link',
+  planificador: 'cal',
+  sesion_profunda: 'timer',
+  estratega: 'flag',
+  curiosidad: 'eye',
+  mentor: 'book',
+  archivista: 'archive',
+  mercader: 'store',
+  interes_compuesto: 'coin',
+  tesorero: 'wallet',
+  ahorrador: 'gem',
+  inversionista: 'gem',
+  regeneracion: 'vital',
+  descanso_sagrado: 'moon',
+  piel_gruesa: 'shield',
+};
+
+/** Árbol de habilidades: tronco + 5 ramas como filas de nodos unidos; cada nodo cambia una regla. */
 export function SkillsScreen() {
   const ctx = useGameContext();
   const [sel, setSel] = useState<SkillNode | null>(null);
@@ -18,6 +53,7 @@ export function SkillsScreen() {
   const p = ctx.player;
   const recommended = p.class ? (p.class.primaryAttribute ?? 'trunk') : 'trunk';
   const st = sel ? nodeStatus(ctx, sel) : null;
+  const pts = p.level.skillPointsAvailable;
 
   const doUnlock = async () => {
     if (!sel) return;
@@ -27,84 +63,113 @@ export function SkillsScreen() {
   };
 
   return (
-    <div className="space-y-4 animate-fadein">
-      <div className="flex items-end justify-between">
-        <div>
-          <h1 className="font-display text-xl text-gold">Árbol de habilidades</h1>
-          <p className="text-xs text-mist">Cada nodo cambia una regla del juego. Nada decorativo.</p>
-        </div>
-        <div className="text-right text-xs">
-          <div className="text-arcane-glow">{p.level.skillPointsAvailable} punto{p.level.skillPointsAvailable === 1 ? '' : 's'}</div>
-          <div className="text-mist">{ctx.skills.length}/{SKILL_TREE.length} nodos</div>
-        </div>
+    <div className="screen" style={{ '--tint': 'var(--color-arcane)' } as CSSProperties}>
+      <div className="head center">
+        <span className="title">Árbol de habilidades</span>
+        <span className="act num">
+          {ctx.skills.length}/{SKILL_TREE.length}
+        </span>
       </div>
-      {msg && (
-        <div className="rounded-xl bg-void p-3 text-sm text-parchment" onClick={() => setMsg(null)}>
-          {msg}
+      <Card className="row">
+        <Pill tone={pts > 0 ? 'gold' : 'soft'} icon="star">
+          {pts} punto{pts === 1 ? '' : 's'}
+        </Pill>
+        <div className="grow s" style={{ margin: 0 }}>
+          Cada nodo cambia una regla del juego. Nada decorativo.
         </div>
+      </Card>
+      {msg && (
+        <Notice tone="xp" icon="spark">
+          <span onClick={() => setMsg(null)}>{msg}</span>
+        </Notice>
       )}
       {BRANCHES.map((branch) => {
         const nodes = SKILL_TREE.filter((n) => n.branch === branch);
-        const color = branch === 'trunk' ? 'var(--color-parchment)' : ATTRIBUTE_META[branch as AttributeId].color;
+        const color = branch === 'trunk' ? 'var(--color-ink)' : ATTR_VAR[branch as AttributeId];
+        const icon: IconId = branch === 'trunk' ? 'shield' : ATTR_ICON[branch as AttributeId];
+        const available = nodes.filter((n) => nodeStatus(ctx, n).available && pts > 0);
         return (
-          <section key={branch} className="panel p-3">
-            <div className="mb-2 flex items-center justify-between">
-              <div className="text-sm font-semibold" style={{ color }}>
-                {BRANCH_TEXTS[branch].icon} {BRANCH_TEXTS[branch].name}
-                {branch !== 'trunk' && <span className="ml-2 text-xs text-mist">Nv {p.attributes[branch as AttributeId].level}</span>}
-              </div>
-              {branch === recommended && <span className="chip chip-active">recomendada</span>}
-            </div>
-            <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-              {nodes.map((n) => {
+          <Card key={branch} style={{ '--c': color } as CSSProperties}>
+            <Label
+              right={
+                <span className="row" style={{ gap: 6 }}>
+                  {branch === recommended && <Chip color="var(--color-xp)">recomendada</Chip>}
+                  {branch !== 'trunk' && <span>Nv {p.attributes[branch as AttributeId].level}</span>}
+                </span>
+              }
+            >
+              <span className="row" style={{ gap: 8, color }}>
+                <Icon id={icon} />
+                {BRANCH_TEXTS[branch].name}
+              </span>
+            </Label>
+            <div className="branch" style={{ marginTop: 8 }}>
+              {nodes.map((n, k) => {
                 const s = nodeStatus(ctx, n);
-                const t = SKILL_TEXTS[n.id];
+                const cls = s.unlocked ? 'on' : s.available && pts > 0 ? 'av' : '';
                 return (
-                  <button
-                    key={n.id}
-                    onClick={() => setSel(n)}
-                    className={`min-w-[132px] rounded-xl border p-2 text-left ${s.unlocked ? 'border-gold bg-gold/10' : s.available ? 'border-arcane bg-arcane/10 animate-pulse-slow' : 'border-steel bg-void opacity-70'}`}
-                  >
-                    <div className="text-xs font-semibold text-parchment">{t.name}</div>
-                    <div className="mt-1 line-clamp-3 text-[11px] text-mist">{t.effect}</div>
-                    <div className="mt-1 text-[10px] text-mist">
-                      {s.unlocked ? '✓ activo' : `${n.cost} pt${n.cost > 1 ? 's' : ''}${n.minAttrLevel ? ` · nv ${n.minAttrLevel}` : ''}${n.minLevel ? ` · nivel ${n.minLevel}` : ''}`}
-                    </div>
-                  </button>
+                  <span key={n.id} style={{ display: 'contents' }}>
+                    {k > 0 && <span className={`link ${s.unlocked ? 'on' : ''}`} />}
+                    <button type="button" className={`node ${cls} ${sel?.id === n.id ? 'sel' : ''}`} title={SKILL_TEXTS[n.id].name} onClick={() => setSel(n)}>
+                      <Icon id={NODE_ICON[n.id] ?? icon} />
+                      {!s.unlocked && <span className="cost num">{n.cost}</span>}
+                    </button>
+                  </span>
                 );
               })}
             </div>
-          </section>
+            <div className="s" style={{ marginTop: 8 }}>
+              {available.length > 0 ? (
+                available.slice(0, 2).map((n) => (
+                  <div key={n.id}>
+                    <b style={{ color: 'var(--color-ink)' }}>{SKILL_TEXTS[n.id].name}</b>: {SKILL_TEXTS[n.id].effect}
+                  </div>
+                ))
+              ) : nodes.every((n) => nodeStatus(ctx, n).unlocked) ? (
+                'Rama completa.'
+              ) : pts === 0 ? (
+                'Sube de nivel para ganar puntos.'
+              ) : (
+                'Sube este atributo o desbloquea el nodo anterior.'
+              )}
+            </div>
+          </Card>
         );
       })}
-      <div className="panel p-3 text-xs text-mist">
-        Reinicios de árbol disponibles: {p.level.treeResetsAvailable} (uno por rango alcanzado). Los nodos son permanentes salvo que reinicies.
-        {p.level.treeResetsAvailable > 0 && ctx.skills.length > 0 && (
-          <button className="btn btn-ghost btn-sm mt-2 w-full" onClick={() => resetTree(ctx).then((r) => setMsg(r.ok ? 'Árbol reiniciado. Todos tus puntos volvieron.' : r.error ?? ''))}>
-            Reiniciar árbol
-          </button>
-        )}
-      </div>
+      <Card tone="tight">
+        <div className="row" style={{ padding: '10px 0' }}>
+          <div className="grow s" style={{ margin: 0 }}>
+            Reinicios de árbol disponibles: {p.level.treeResetsAvailable} (uno por rango alcanzado). Los nodos son permanentes salvo que reinicies.
+          </div>
+          {p.level.treeResetsAvailable > 0 && ctx.skills.length > 0 && (
+            <button className="btn ghost sm auto" onClick={() => resetTree(ctx).then((r) => setMsg(r.ok ? 'Árbol reiniciado. Todos tus puntos volvieron.' : r.error ?? ''))}>
+              Reiniciar
+            </button>
+          )}
+        </div>
+      </Card>
 
       <Sheet open={Boolean(sel)} onClose={() => setSel(null)} title={sel ? SKILL_TEXTS[sel.id].name : ''}>
         {sel && st && (
           <div className="space-y-3 text-sm">
-            <p className="text-parchment">{SKILL_TEXTS[sel.id].effect}</p>
-            <p className="italic text-mist">"{SKILL_TEXTS[sel.id].flavor}"</p>
-            <div className="text-xs text-mist">
+            <p>{SKILL_TEXTS[sel.id].effect}</p>
+            <p className="s italic">"{SKILL_TEXTS[sel.id].flavor}"</p>
+            <div className="s">
               Costo: {sel.cost} punto{sel.cost > 1 ? 's' : ''}
               {sel.requires?.length ? ` · Requiere: ${sel.requires.map((r) => SKILL_TEXTS[r].name).join(', ')}` : ''}
               {sel.minAttrLevel ? ` · ${BRANCH_TEXTS[sel.branch].name} nivel ${sel.minAttrLevel}` : ''}
               {sel.minLevel ? ` · Nivel general ${sel.minLevel}` : ''}
             </div>
             {st.unlocked ? (
-              <div className="text-gold">Ya está activo.</div>
+              <Chip color="var(--color-gold)" icon="check">
+                Activo
+              </Chip>
             ) : st.available ? (
-              <button className="btn btn-primary w-full" onClick={doUnlock}>
-                Desbloquear
+              <button className="btn gold" onClick={doUnlock} disabled={pts <= 0}>
+                {pts > 0 ? 'Desbloquear' : 'Sin puntos disponibles'}
               </button>
             ) : (
-              <ul className="list-disc pl-5 text-xs text-ember">
+              <ul className="list-disc pl-5 text-xs" style={{ color: 'var(--color-ember)' }}>
                 {st.reasons.map((r) => (
                   <li key={r}>{r}</li>
                 ))}
