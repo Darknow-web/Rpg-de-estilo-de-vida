@@ -1,0 +1,20 @@
+rules_version = '2';
+
+// LIFE QUEST — Reglas de Cloud Storage for Firebase.
+// Solo se usan si activas el plan Blaze y cambias EVIDENCE_BACKEND a 'cloud-storage' (ver src/lib/storage.ts).
+// Cada jugador solo puede leer y escribir en su carpeta. Máximo 300 KB por foto (ya vienen comprimidas del cliente).
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /players/{uid}/{allPaths=**} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.size <= 300 * 1024
+        && request.resource.contentType.matches('image/jpeg');
+    }
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

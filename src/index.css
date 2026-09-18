@@ -1,0 +1,128 @@
+@import 'tailwindcss';
+
+/* ── Tema Life Quest: RPG oscuro moderno (Solo Leveling / Diablo / Persona). Nunca infantil. ── */
+@theme {
+  --color-abyss: #0b0a12;
+  --color-void: #12111c;
+  --color-slate: #1b1927;
+  --color-steel: #262436;
+  --color-ash: #3a374d;
+  --color-mist: #8a86a3;
+  --color-parchment: #ece8f5;
+  --color-ember: #ff5c3a;
+  --color-gold: #f2c14e;
+  --color-arcane: #7c5cff;
+  --color-arcane-glow: #a78bfa;
+  --color-blood: #d7263d;
+  --color-life: #3ddc97;
+  --color-frost: #5cc8ff;
+  --color-fuerza: #ff5c3a;
+  --color-disciplina: #7c5cff;
+  --color-intelecto: #5cc8ff;
+  --color-riqueza: #f2c14e;
+  --color-vitalidad: #3ddc97;
+
+  --font-display: 'Cinzel', 'Georgia', serif;
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --shadow-glow: 0 0 24px rgba(124, 92, 255, 0.35);
+  --shadow-ember: 0 0 24px rgba(255, 92, 58, 0.4);
+  --shadow-gold: 0 0 28px rgba(242, 193, 78, 0.45);
+
+  --animate-levelup: levelup 900ms cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+  --animate-pop: pop 420ms cubic-bezier(0.2, 0.9, 0.3, 1.4) both;
+  --animate-shake: shake 500ms ease-in-out both;
+  --animate-float: float 3s ease-in-out infinite;
+  --animate-fadein: fadein 300ms ease-out both;
+  --animate-pulse-slow: pulseslow 2.4s ease-in-out infinite;
+
+  @keyframes levelup {
+    0% { transform: scale(0.6) rotate(-6deg); opacity: 0; filter: blur(6px); }
+    60% { transform: scale(1.08) rotate(1deg); opacity: 1; filter: blur(0); }
+    100% { transform: scale(1) rotate(0); opacity: 1; }
+  }
+  @keyframes pop {
+    0% { transform: scale(0.85); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-4px); }
+  }
+  @keyframes fadein {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulseslow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+  }
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html, body, #root {
+  min-height: 100%;
+  background: var(--color-abyss);
+  color: var(--color-parchment);
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: contain;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.font-display {
+  font-family: var(--font-display);
+  letter-spacing: 0.04em;
+}
+
+/* Panel tipo "hoja de personaje" */
+.panel {
+  background: linear-gradient(160deg, var(--color-slate), var(--color-void));
+  border: 1px solid var(--color-steel);
+  border-radius: 1rem;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+.panel-glow {
+  border-color: rgba(124, 92, 255, 0.45);
+  box-shadow: var(--shadow-glow);
+}
+
+.btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-3 font-semibold transition active:scale-[0.97] disabled:opacity-40 disabled:active:scale-100 select-none;
+  min-height: 48px;
+}
+.btn-primary { @apply bg-arcane text-white shadow-glow hover:bg-arcane-glow; }
+.btn-ember { @apply bg-ember text-white shadow-ember; }
+.btn-gold { @apply bg-gold text-abyss shadow-gold; }
+.btn-ghost { @apply bg-steel/60 text-parchment hover:bg-steel; }
+.btn-danger { @apply bg-blood/80 text-white; }
+.btn-sm { min-height: 38px; @apply px-3 py-2 text-sm rounded-lg; }
+
+.chip { @apply inline-flex items-center gap-1 rounded-full border border-steel bg-void px-3 py-1 text-xs text-mist; }
+.chip-active { @apply border-arcane bg-arcane/20 text-parchment; }
+
+.input {
+  @apply w-full rounded-xl border border-steel bg-void px-4 py-3 text-parchment placeholder:text-mist/60 focus:border-arcane focus:outline-none;
+  min-height: 48px;
+}
+
+.bar { @apply h-2.5 w-full overflow-hidden rounded-full bg-steel; }
+.bar > div { @apply h-full rounded-full transition-all duration-700; }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.safe-bottom { padding-bottom: calc(env(safe-area-inset-bottom) + 5.5rem); }

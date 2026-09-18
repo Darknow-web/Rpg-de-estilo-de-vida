@@ -1,0 +1,111 @@
+rules_version = '2';
+
+// LIFE QUEST — Reglas de seguridad de Firestore
+// Principio: cada jugador solo lee y escribe su propio subárbol players/{uid}.
+// El historial (wallet, completions, failures) es inmutable: se crea, nunca se edita ni se borra.
+// Una completación solo puede pasar a estado "annulled" (anular no borra).
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function unchanged(field) {
+      return request.resource.data[field] == resource.data[field];
+    }
+
+    match /players/{uid} {
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid);
+      allow update: if isOwner(uid);
+      allow delete: if false;
+
+      match /missions/{id} {
+        allow read, create, update: if isOwner(uid);
+        allow delete: if false;
+      }
+
+      match /rewards/{id} {
+        allow read, create, update: if isOwner(uid);
+        allow delete: if false;
+      }
+
+      match /skills/{id} {
+        allow read, create: if isOwner(uid);
+        allow update, delete: if false;
+      }
+
+      match /medals/{id} {
+        allow read, create: if isOwner(uid);
+        allow update, delete: if false;
+      }
+
+      match /notifications/{id} {
+        allow read, write: if isOwner(uid);
+      }
+
+      match /pushSubscriptions/{id} {
+        allow read, write: if isOwner(uid);
+      }
+
+      match /resurrection/{id} {
+        allow read, create, update: if isOwner(uid);
+        allow delete: if false;
+      }
+
+      match /systemLog/{id} {
+        allow read, create: if isOwner(uid);
+        allow update: if isOwner(uid) && unchanged('action') && unchanged('reason');
+        allow delete: if false;
+      }
+
+      match /gym/{document=**} {
+        allow read, write: if isOwner(uid);
+      }
+
+      // ── Historial inmutable ──
+      match /completions/{id} {
+        allow read, create: if isOwner(uid);
+        allow update: if isOwner(uid)
+          && unchanged('missionId')
+          && unchanged('day')
+          && unchanged('xpAwarded')
+          && unchanged('coinsAwarded')
+          && request.resource.data.status == 'annulled';
+        allow delete: if false;
+      }
+
+      match /failures/{id} {
+        allow read, create: if isOwner(uid);
+        allow update, delete: if false;
+      }
+
+      match /wallet/{id} {
+        allow read, create: if isOwner(uid);
+        allow update, delete: if false;
+      }
+
+      match /evidence/{id} {
+        allow read: if isOwner(uid);
+        allow create: if isOwner(uid) && request.resource.data.sizeBytes <= 300000;
+        allow update: if isOwner(uid) && unchanged('missionId') && unchanged('completionId');
+        allow delete: if isOwner(uid) && resource.data.archived == true;
+      }
+    }
+
+    // Reservado para funciones sociales futuras. Hoy solo el dueño.
+    match /public_profiles/{uid} {
+      allow read, write: if isOwner(uid);
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
