@@ -10,7 +10,10 @@ import { formatDayHuman, zonedParts } from '@/lib/time';
 import { PUNCTUALITY } from '@/lib/game-balance';
 import { Sheet } from '@/components/ui/Sheet';
 import { Icon } from '@/components/ui/Icon';
-import { Card, Chip, EmptyState, IconSquare, Label, Notice, PageHead } from '@/components/ui/primitives';
+import { ATTR_ICON, ATTR_VAR, Card, Chip, EmptyState, IconSquare, Label, Notice, PageHead, Row } from '@/components/ui/primitives';
+import { PlanSheet } from './PlanSheet';
+import { agendaData, isAgendaMission, removeAgendaMission } from '../tasks';
+import { requestToken } from '../client';
 
 /** Hora local del evento (Lima). */
 export function eventTime(e: CalendarEvent, tz: string): string {
@@ -27,12 +30,32 @@ export function AgendaScreen({ embedded }: { embedded?: boolean } = {}) {
   const cal = useCalendar();
   const [sel, setSel] = useState<CalendarEvent | null>(null);
   const [msg, setMsg] = useState<string | null>(null);
+  const [planOpen, setPlanOpen] = useState(false);
   useEffect(() => {
     if (cal.connected && !cal.loading) void cal.refresh(false);
   }, []);
   if (!ctx) return null;
   const configured = calendarConfigured();
   const groups = groupEventsByDay(cal.events, ctx.tz).filter((g) => g.day >= ctx.today);
+  const agendaTasks = ctx.missions.filter((m) => m.active && isAgendaMission(m) && (m.schedule.once ?? '') >= ctx.today).sort((a, b) => `${a.schedule.once}${a.schedule.window !== 'allDay' ? a.schedule.window.start : ''}`.localeCompare(`${b.schedule.once}${b.schedule.window !== 'allDay' ? b.schedule.window.start : ''}`));
+
+  const removeTask = async (id: string) => {
+    const m = ctx.missions.find((x) => x.id === id);
+    if (!m) return;
+    const d = agendaData(m);
+    const alsoCalendar = Boolean(d?.gcalEventId) && window.confirm('¿Borrar también el evento que la app creó en tu Google Calendar?');
+    let token: string | undefined;
+    if (alsoCalendar) {
+      try {
+        token = await requestToken({ interactive: false });
+      } catch {
+        token = undefined;
+      }
+    }
+    const r = await removeAgendaMission(ctx, m, { token, deleteFromCalendar: alsoCalendar });
+    setMsg(r.calendarError ? `Tarea quitada de la app. El evento del calendario no se pudo borrar: ${r.calendarError}` : 'Tarea quitada. Queda archivada en el historial.');
+    if (alsoCalendar && !r.calendarError) void cal.refresh(false);
+  };
   const selMission = sel ? findCommitment(ctx.missions, sel.id) : undefined;
   const selElig = sel ? commitmentEligibility(sel, ctx.now) : null;
   const selWindow = sel && !sel.allDay ? punctualityWindow(sel.start, ctx.tz) : null;
@@ -52,16 +75,56 @@ export function AgendaScreen({ embedded }: { embedded?: boolean } = {}) {
 
   const body = (
     <>
+      <button type="button" className="card row" style={{ textAlign: 'left', cursor: 'pointer', borderColor: 'rgba(59,130,255,.35)' }} onClick={() => setPlanOpen(true)}>
+        <IconSquare icon="plus" color="var(--color-system)" />
+        <div className="grow">
+          <div className="t">Agregar pendientes</div>
+          <div className="s">Foto de tu lista o escríbelos. El Sistema los acomoda en tus huecos y cada uno da XP y oro al completarlo.</div>
+        </div>
+        <Icon id="chev" className="chev" />
+      </button>
+      <PlanSheet open={planOpen} onClose={() => setPlanOpen(false)} />
+      {agendaTasks.length > 0 && (
+        <>
+          <Label right={`${agendaTasks.length}`}>Tareas planificadas</Label>
+          <Card tone="tight">
+            <div className="list">
+              {agendaTasks.map((m) => (
+                <Row
+                  key={m.id}
+                  icon={ATTR_ICON[m.attribute]}
+                  color={ATTR_VAR[m.attribute]}
+                  title={m.name}
+                  sub={`${m.schedule.once === ctx.today ? 'Hoy' : formatDayHuman(m.schedule.once ?? '')} · ${m.schedule.window !== 'allDay' ? `${m.schedule.window.start} – ${m.schedule.window.end}` : 'todo el día'} · +${m.xp} XP${agendaData(m)?.gcalEventId ? ' · en tu calendario' : ''}`}
+                  to={`/missions/${m.id}`}
+                  right={
+                    <button
+                      type="button"
+                      className="chip ghost"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        void removeTask(m.id);
+                      }}
+                    >
+                      Quitar
+                    </button>
+                  }
+                />
+              ))}
+            </div>
+          </Card>
+        </>
+      )}
       {!configured && (
         <Notice tone="sys" icon="cal">
-          Falta configurar el cliente de Google (VITE_GOOGLE_CLIENT_ID). Ver docs/DEPLOY.md, sección Google Calendar.
+          Falta configurar el cliente de Google (VITE_GOOGLE_CLIENT_ID). Ver docs/DEPLOY.md, sección Google Calendar. Sin él, "Agregar pendientes" planifica igual usando solo tus misiones.
         </Notice>
       )}
       {configured && !cal.connected && (
         <EmptyState
           icon="cal"
           title="Conecta tu Google Calendar"
-          body="Solo lectura. Tus eventos no pasan por nuestro servidor ni se guardan en la nube del juego."
+          body="Lee tus eventos para no chocar con ellos y escribe solo las tareas que confirmes. Nada pasa por nuestro servidor ni se guarda en la nube del juego."
           action={
             <button className="btn system sm auto" onClick={() => void cal.connect()} disabled={cal.loading}>
               <Icon id="google" />

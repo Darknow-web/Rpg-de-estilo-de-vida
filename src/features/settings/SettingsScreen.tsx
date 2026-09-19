@@ -118,7 +118,7 @@ export function SettingsScreen() {
           <div className="s">Falta VITE_GOOGLE_CLIENT_ID. Los pasos (gratis, 5 minutos) están en docs/DEPLOY.md, sección Google Calendar.</div>
         ) : cal.connected ? (
           <>
-            <div className="s">Solo lectura. Los eventos se leen directo desde tu navegador y no pasan por el servidor ni por Firestore.</div>
+            <div className="s">Los eventos se leen directo desde tu navegador y no pasan por el servidor ni por Firestore. La app solo escribe las tareas de tu lista que confirmes en la Agenda (prefijo "[LQ]"); nunca las misiones diarias.</div>
             <div className="flex flex-col gap-2">
               {cal.calendars.map((c) => (
                 <Toggle
@@ -146,7 +146,7 @@ export function SettingsScreen() {
           </>
         ) : (
           <>
-            <div className="s">Ve tus horarios dentro del juego y marca compromisos para ganar XP por llegar a tiempo. Solo lectura.</div>
+            <div className="s">Ve tus horarios dentro del juego, marca compromisos para ganar XP por llegar a tiempo y deja que el Sistema acomode tus pendientes en los huecos libres. Se pide permiso de leer y crear eventos; la app solo escribe lo que tú confirmes.</div>
             <button className="btn system sm" onClick={() => void cal.connect()} disabled={cal.loading}>
               <Icon id="google" />
               {cal.loading ? 'Conectando…' : 'Conectar Google Calendar'}

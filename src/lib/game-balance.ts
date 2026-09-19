@@ -305,6 +305,13 @@ export const PUNCTUALITY = { windowMinutes: 60, earlyMinutes: 10, earlyBonus: 0.
  * (≤15 min → 3, 30 min → 4, ≥1 h → hasta 5). El set local de respaldo usa siempre el mínimo.
  */
 export const ONBOARDING = { maxRegenerations: 3, dailyMissions: { min: 3, max: 5 } } as const;
+/**
+ * Agenda inteligente (tareas de la lista de pendientes): se planifican en los huecos libres de los próximos
+ * `daysAhead` días, descontando calendario, misiones, gimnasio y sueño (`sleepStart`–`sleepEnd`). Un hueco cuenta
+ * si dura al menos `minSlotMinutes`. Hoy no se planifica antes de ahora + `todayLeadMinutes`.
+ * Fallar una tarea de agenda cuesta corazón como cualquier misión (stakes 'normal').
+ */
+export const AGENDA = { daysAhead: 7, sleepStart: '23:00', sleepEnd: '06:00', minSlotMinutes: 20, todayLeadMinutes: 30, maxRounds: 3, eventPrefix: '[LQ] ' } as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ÁRBOL DE HABILIDADES (32 nodos) — cada nodo CAMBIA UNA REGLA del juego

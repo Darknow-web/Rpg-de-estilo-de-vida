@@ -243,3 +243,91 @@ export const gymScanOutputSchema = z.object({
   espacioLibre: z.boolean(),
 });
 export type GymScanOutput = z.infer<typeof gymScanOutputSchema>;
+
+// ── Agenda inteligente: foto de pendientes → tareas ──
+// La foto NO se guarda: viaja en la petición, se envía a la IA y se descarta (misma excepción que gym-scan).
+const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'YYYY-MM-DD');
+export const prioritySchema = z.enum(['alta', 'media', 'baja']);
+
+export const tasksFromPhotoInputSchema = z.object({
+  image: z.string().min(100).max(300_000),
+  /** Día de hoy en la zona del jugador, para resolver "mañana", "el viernes"… */
+  hoy: isoDay,
+  /** Texto opcional que el jugador añadió (contexto o lista escrita a mano). */
+  nota: z.string().max(600).optional(),
+});
+export type TasksFromPhotoInput = z.infer<typeof tasksFromPhotoInputSchema>;
+
+export const pendingTaskSchema = z.object({
+  nombre: z.string().min(2).max(80),
+  duracion_minutos: z.number().int().min(5).max(240),
+  atributo: attributeSchema,
+  fecha_limite: isoDay.optional(),
+  prioridad: prioritySchema,
+});
+export type PendingTaskAi = z.infer<typeof pendingTaskSchema>;
+
+export const tasksFromPhotoOutputSchema = z.object({
+  tareas: z.array(pendingTaskSchema).max(20),
+  /** Texto que no se pudo interpretar como tarea (para mostrarlo y que el jugador lo escriba). */
+  no_reconocido: z.array(z.string().max(80)).max(8),
+});
+export type TasksFromPhotoOutput = z.infer<typeof tasksFromPhotoOutputSchema>;
+
+// ── Agenda inteligente: planificar tareas en los huecos libres ──
+export const freeSlotSchema = z.object({ dia: isoDay, inicio: hhmm, fin: hhmm });
+export const busyBlockSchema = z.object({ dia: isoDay, inicio: hhmm, fin: hhmm, titulo: z.string().max(80) });
+
+export const planWeekInputSchema = z.object({
+  hoy: isoDay,
+  /** Hora actual HH:mm en la zona del jugador (para no planificar en el pasado de hoy). */
+  ahora: hhmm,
+  tareas: z.array(pendingTaskSchema).min(1).max(20),
+  /** Huecos libres calculados en el cliente (calendario, gimnasio, misiones y sueño ya descontados). */
+  huecos: z.array(freeSlotSchema).max(120),
+  /** Lo que ya ocupa la semana: solo título, día y horas (nunca descripciones ni invitados). */
+  ocupado: z.array(busyBlockSchema).max(150),
+  momento_preferido: z.enum(['morning', 'afternoon', 'evening', 'varies']),
+  /** Respuestas a preguntas de una ronda anterior (id → opción elegida). */
+  respuestas: z.array(z.object({ id: z.string().max(40), respuesta: z.string().max(120) })).max(6).optional(),
+  ronda: z.number().int().min(0).max(3),
+});
+export type PlanWeekInput = z.infer<typeof planWeekInputSchema>;
+
+export const planWeekOutputSchema = z.object({
+  asignaciones: z
+    .array(
+      z.object({
+        tarea_index: z.number().int().min(0).max(19),
+        dia: isoDay,
+        inicio: hhmm,
+        fin: hhmm,
+        razon: z.string().max(160),
+      }),
+    )
+    .max(20),
+  sin_lugar: z.array(z.object({ tarea_index: z.number().int().min(0).max(19), motivo: z.string().max(160) })).max(20),
+  /** Preguntas estructuradas cuando algo no cabe o falta un dato. Máximo 3; el jugador responde tocando una opción. */
+  preguntas: z
+    .array(
+      z.object({
+        id: z.string().min(1).max(40),
+        texto: z.string().min(3).max(200),
+        opciones: z.array(z.string().min(1).max(80)).min(2).max(4),
+      }),
+    )
+    .max(3),
+  /** Cambios sobre lo que ya existe en el calendario. NUNCA se aplican sin que el jugador los acepte uno a uno. */
+  movimientos_sugeridos: z
+    .array(
+      z.object({
+        que: z.string().min(1).max(80),
+        de: z.object({ dia: isoDay, inicio: hhmm, fin: hhmm }),
+        a: z.object({ dia: isoDay, inicio: hhmm, fin: hhmm }),
+        motivo: z.string().max(160),
+      }),
+    )
+    .max(5),
+  resumen: z.string().max(300),
+});
+export type PlanWeekOutput = z.infer<typeof planWeekOutputSchema>;

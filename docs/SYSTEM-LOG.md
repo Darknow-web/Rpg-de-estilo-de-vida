@@ -25,5 +25,8 @@ Principio rector: **automático por defecto, pero nunca a escondidas**. Toda acc
 | Archivar un compromiso de agenda vencido (sin corazones ni racha; +1 al contador de puntualidad) | Al vencer la hora del evento | No (queda anotado) | Historial, Agenda |
 | Otorgar medalla Puntual (bronce/plata/oro) | 10/30/100 llegadas a tiempo | — | Personaje, Historial |
 | Otorgar medalla de racha (bronce/plata/oro) | 7/30/100 días seguidos, una sola vez por umbral | — | Personaje, Historial |
+| Proponer dónde colocar los pendientes de tu lista (y preguntar si no caben) | Al tocar "Planificar" en la Agenda | Es propuesta: nada se escribe hasta "Confirmar plan" | Agenda |
+| Crear misiones de agenda y sus eventos "[LQ]" en Google Calendar | Solo al confirmar el plan | Quitar la tarea (archiva; el evento se borra con confirmación) | Agenda, Hoy, Historial |
+| Mover un evento existente del calendario | Nunca solo: solo los movimientos que aceptaste uno a uno | Mover de vuelta en Google Calendar | Agenda |
 
 Lo que el sistema **nunca** hace solo: borrar historial, bajar precios, quitar XP ya ganada, castigar más de una semana, decidir qué le importa al jugador.

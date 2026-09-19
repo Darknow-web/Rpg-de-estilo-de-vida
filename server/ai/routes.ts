@@ -12,7 +12,13 @@ import {
   availabilityOutputSchema,
   gymScanInputSchema,
   gymScanOutputSchema,
+  tasksFromPhotoInputSchema,
+  tasksFromPhotoOutputSchema,
+  planWeekInputSchema,
+  planWeekOutputSchema,
 } from '@/shared/schemas/ai';
+import { TASKS_FROM_PHOTO_SYSTEM_PROMPT, buildTasksFromPhotoUserPrompt } from './prompts/tasksFromPhoto.ts';
+import { PLAN_WEEK_SYSTEM_PROMPT, buildPlanWeekUserPrompt } from './prompts/planWeek.ts';
 import { ONBOARDING_SYSTEM_PROMPT, buildOnboardingUserPrompt } from './prompts/onboarding.ts';
 import { APPRAISER_SYSTEM_PROMPT, buildAppraiserUserPrompt } from './prompts/appraiser.ts';
 import { NEXT_MISSION_SYSTEM_PROMPT, buildNextMissionUserPrompt } from './prompts/nextMission.ts';
@@ -145,4 +151,48 @@ aiRouter.post(
       replyFallback(res, err);
     }
   },
+);
+
+// ── Agenda inteligente ──
+/** Rutas cuyo cuerpo lleva una imagen en base64: el parser global de 256 KB no se aplica (server/index.ts). */
+export const IMAGE_ROUTES = ['/api/ai/gym-scan', '/api/ai/tasks-from-photo'] as const;
+
+// Foto de una lista de pendientes → tareas. La foto no se guarda: viaja, se envía a la IA y se descarta.
+aiRouter.post(
+  '/tasks-from-photo',
+  express.json({ limit: GYM_SCAN_BODY_LIMIT }),
+  rateLimit('tasks-photo', 10),
+  async (req: AuthedRequest, res: Response) => {
+    const parsed = tasksFromPhotoInputSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ ok: false, error: 'bad_request', issues: parsed.error.issues.slice(0, 5) });
+      return;
+    }
+    const image: InlineImage = { mimeType: sniffImageMime(parsed.data.image), data: parsed.data.image };
+    try {
+      const data = await structuredCall({
+        system: TASKS_FROM_PHOTO_SYSTEM_PROMPT,
+        user: buildTasksFromPhotoUserPrompt(parsed.data.hoy, parsed.data.nota),
+        schema: tasksFromPhotoOutputSchema,
+        temperature: 0.1,
+        images: [image],
+      });
+      res.json({ ok: true, data, model: MODEL_ID });
+    } catch (err) {
+      replyFallback(res, err);
+    }
+  },
+);
+
+// Planificador: tareas + huecos libres → asignaciones, preguntas y movimientos sugeridos (nunca aplicados solos).
+aiRouter.post(
+  '/plan-week',
+  rateLimit('plan', 20),
+  handle({
+    input: planWeekInputSchema,
+    output: planWeekOutputSchema,
+    system: PLAN_WEEK_SYSTEM_PROMPT,
+    user: buildPlanWeekUserPrompt,
+    temperature: 0.3,
+  }),
 );

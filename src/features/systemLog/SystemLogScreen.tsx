@@ -115,4 +115,5 @@ const ACTION_LABEL: Record<string, string> = {
   commitment_missed: 'Compromiso no registrado',
   medal_punctual: 'Medalla Puntual',
   medal_streak: 'Medalla de racha',
+  agenda_planned: 'Pendientes planificados',
 };

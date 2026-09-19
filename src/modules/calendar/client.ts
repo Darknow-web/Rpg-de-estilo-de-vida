@@ -1,5 +1,7 @@
 /**
- * Cliente de Google Calendar (solo lectura) con Google Identity Services, modelo de token.
+ * Cliente de Google Calendar con Google Identity Services, modelo de token.
+ * - Lee eventos y ESCRIBE solo lo que el jugador confirma desde el planificador de la agenda (tareas de la lista).
+ *   Las misiones diarias nunca se escriben en el calendario.
  * - El token de acceso y su vencimiento viven SOLO en memoria (variable de módulo): al recargar se pide otro.
  * - Todo va directo del navegador a googleapis.com; el servidor de Life Quest y Firestore nunca ven la agenda.
  * - Un 401 limpia el token y lanza `CalendarAuthError` para que la UI ofrezca reconectar.
@@ -14,7 +16,8 @@ declare global {
 }
 
 export const GIS_SRC = 'https://accounts.google.com/gsi/client';
-export const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.readonly';
+/** Leer + crear/editar/borrar eventos (no da acceso a la configuración de los calendarios ni a otros datos de Google). */
+export const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
 const API = 'https://www.googleapis.com/calendar/v3';
 
 /** El token venció o el jugador no dio permiso. La UI debe ofrecer "Conectar de nuevo". */
@@ -253,4 +256,83 @@ export async function listEvents(token: string, calendarIds: string[], fromISO: 
     }
   }
   return all.sort((a, b) => eventSortKey(a) - eventSortKey(b) || a.summary.localeCompare(b.summary, 'es'));
+}
+
+// ── Escritura (solo tareas confirmadas por el jugador) ──
+
+async function apiSend<T>(method: 'POST' | 'PATCH' | 'DELETE', path: string, token: string, body?: unknown): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`${API}${path}`, {
+      method,
+      headers: { Authorization: `Bearer ${token}`, ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}) },
+      body: body !== undefined ? JSON.stringify(body) : undefined,
+    });
+  } catch (err) {
+    throw new CalendarApiError(0, `Sin conexión con Google Calendar: ${(err as Error).message}`);
+  }
+  if (res.status === 401) {
+    clearToken();
+    throw new CalendarAuthError();
+  }
+  if (!res.ok) {
+    let detail = '';
+    try {
+      const j = (await res.json()) as { error?: { message?: string } };
+      detail = j.error?.message ?? '';
+    } catch {
+      /* sin cuerpo */
+    }
+    throw new CalendarApiError(res.status, detail || `Google Calendar respondió ${res.status}.`);
+  }
+  if (res.status === 204) return undefined as T;
+  return (await res.json()) as T;
+}
+
+export interface NewEvent {
+  summary: string;
+  description?: string;
+  /** Día "YYYY-MM-DD" y horas "HH:mm" en la zona `tz`. */
+  day: string;
+  start: string;
+  end: string;
+  tz: string;
+}
+
+function eventBody(e: NewEvent) {
+  return {
+    summary: e.summary,
+    description: e.description,
+    start: { dateTime: `${e.day}T${e.start}:00`, timeZone: e.tz },
+    end: { dateTime: `${e.day}T${e.end}:00`, timeZone: e.tz },
+    // Sin invitados, sin recordatorios extra: la app ya avisa (tope de 4 al día).
+    reminders: { useDefault: false },
+    extendedProperties: { private: { lifeQuest: '1' } },
+  };
+}
+
+/** Crea un evento en el calendario indicado. Devuelve el evento tal como quedó en Google. */
+export async function createEvent(token: string, calendarId: string, e: NewEvent): Promise<CalendarEvent> {
+  const item = await apiSend<GEventItem>('POST', `/calendars/${encodeURIComponent(calendarId)}/events`, token, eventBody(e));
+  const ev = toCalendarEvent(item, calendarId);
+  if (!ev) throw new CalendarApiError(500, 'Google devolvió un evento sin fechas.');
+  return ev;
+}
+
+/** Cambia la hora de un evento existente (movimiento aceptado por el jugador). */
+export async function updateEventTime(token: string, calendarId: string, eventId: string, when: { day: string; start: string; end: string; tz: string }): Promise<void> {
+  await apiSend<GEventItem>('PATCH', `/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`, token, {
+    start: { dateTime: `${when.day}T${when.start}:00`, timeZone: when.tz },
+    end: { dateTime: `${when.day}T${when.end}:00`, timeZone: when.tz },
+  });
+}
+
+/** Borra un evento. Solo se llama para eventos que creó la app y con confirmación del jugador. Un 404/410 se considera ya borrado. */
+export async function deleteEvent(token: string, calendarId: string, eventId: string): Promise<void> {
+  try {
+    await apiSend<void>('DELETE', `/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`, token);
+  } catch (err) {
+    if (err instanceof CalendarApiError && (err.status === 404 || err.status === 410)) return;
+    throw err;
+  }
 }

@@ -8,7 +8,7 @@ import express from 'express';
 import path from 'node:path';
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { aiRouter } from './ai/routes.ts';
+import { aiRouter, IMAGE_ROUTES } from './ai/routes.ts';
 import { timeRouter } from './time.ts';
 import { pushRouter } from './push.ts';
 
@@ -17,8 +17,8 @@ const app = express();
 app.disable('x-powered-by');
 app.set('trust proxy', true);
 const jsonSmall = express.json({ limit: '256kb' });
-// /api/ai/gym-scan lleva hasta 4 fotos en base64: usa su propio parser (límite mayor) dentro del router.
-app.use((req, res, next) => (req.path === '/api/ai/gym-scan' ? next() : jsonSmall(req, res, next)));
+// /api/ai/gym-scan y /api/ai/tasks-from-photo llevan fotos en base64: usan su propio parser (límite mayor) dentro del router.
+app.use((req, res, next) => ((IMAGE_ROUTES as readonly string[]).includes(req.path) ? next() : jsonSmall(req, res, next)));
 
 app.get('/api/health', (_req, res) => {
   res.json({

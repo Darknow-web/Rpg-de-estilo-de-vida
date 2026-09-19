@@ -12,6 +12,8 @@ import { MASTERY } from '@/lib/game-balance';
 import type { Difficulty, Mission } from '@/shared/types';
 import { Icon } from '@/components/ui/Icon';
 import { ATTR_ICON, ATTR_VAR, Bar, Card, Chip, IconSquare, Label, Notice, PageHead, Row } from '@/components/ui/primitives';
+import { agendaData, removeAgendaMission } from '@/modules/calendar/tasks';
+import { requestToken } from '@/modules/calendar/client';
 
 export function MissionDetail() {
   const { id } = useParams();
@@ -225,7 +227,22 @@ export function MissionDetail() {
           Editar
         </button>
         {m.active && (
-          <button className="btn ghost sm" style={{ color: 'var(--color-hp)' }} onClick={() => archiveMission(ctx, m.id, 'archivada por el jugador').then(() => navigate('/'))}>
+          <button
+            className="btn ghost sm"
+            style={{ color: 'var(--color-hp)' }}
+            onClick={async () => {
+              const gd = agendaData(m);
+              if (gd) {
+                const alsoCalendar = Boolean(gd.gcalEventId) && window.confirm('¿Borrar también el evento que la app creó en tu Google Calendar?');
+                let token: string | undefined;
+                if (alsoCalendar) token = await requestToken({ interactive: false }).catch(() => undefined);
+                await removeAgendaMission(ctx, m, { token, deleteFromCalendar: alsoCalendar });
+              } else {
+                await archiveMission(ctx, m.id, 'archivada por el jugador');
+              }
+              navigate('/');
+            }}
+          >
             <Icon id="archive" />
             Archivar
           </button>
