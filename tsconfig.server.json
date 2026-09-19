@@ -19,5 +19,5 @@
       "@/*": ["src/*"]
     }
   },
-  "include": ["server", "src/shared", "src/lib/game-balance.ts"]
+  "include": ["server.ts", "server", "src/shared", "src/lib/game-balance.ts"]
 }
