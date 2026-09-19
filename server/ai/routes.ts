@@ -27,11 +27,12 @@ import { GYM_SCAN_SYSTEM_PROMPT, buildGymScanUserPrompt } from './prompts/gymSca
 import type { z } from 'zod';
 
 export const aiRouter = Router();
-aiRouter.use(requireAuth);
 
 aiRouter.get('/status', (_req, res) => {
   res.json({ available: aiAvailable(), model: MODEL_ID });
 });
+
+aiRouter.use(requireAuth);
 
 /** Respuesta uniforme: { ok: true, data } o { ok: false, fallback: true, reason }. Nunca 500 por fallo de IA. */
 function replyFallback(res: Response, err: unknown) {

@@ -1,0 +1,6 @@
+{
+  "name": "Life Quest",
+  "description": "Tus acciones reales son misiones, la prueba es una foto, tu personaje sube de nivel.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

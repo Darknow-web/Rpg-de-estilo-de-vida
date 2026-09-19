@@ -11,15 +11,17 @@ import {
   connectFirestoreEmulator,
   type Firestore,
 } from 'firebase/firestore';
+import appletConfig from '../../firebase-applet-config.json';
 
 const env = import.meta.env;
 
 export const firebaseConfig = {
-  apiKey: env.VITE_FIREBASE_API_KEY as string | undefined,
-  authDomain: env.VITE_FIREBASE_AUTH_DOMAIN as string | undefined,
-  projectId: env.VITE_FIREBASE_PROJECT_ID as string | undefined,
-  appId: env.VITE_FIREBASE_APP_ID as string | undefined,
-  messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID as string | undefined,
+  apiKey: (env.VITE_FIREBASE_API_KEY as string | undefined) || appletConfig.apiKey,
+  authDomain: (env.VITE_FIREBASE_AUTH_DOMAIN as string | undefined) || appletConfig.authDomain,
+  projectId: (env.VITE_FIREBASE_PROJECT_ID as string | undefined) || appletConfig.projectId,
+  appId: (env.VITE_FIREBASE_APP_ID as string | undefined) || appletConfig.appId,
+  messagingSenderId: (env.VITE_FIREBASE_MESSAGING_SENDER_ID as string | undefined) || appletConfig.messagingSenderId,
+  firestoreDatabaseId: (env.VITE_FIREBASE_DATABASE_ID as string | undefined) || appletConfig.firestoreDatabaseId,
 };
 
 export const firebaseConfigured = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId && firebaseConfig.appId);
@@ -51,10 +53,14 @@ export function auth(): Auth {
 
 export function db(): Firestore {
   if (dbInstance) return dbInstance;
-  dbInstance = initializeFirestore(getApp(), {
+  const settings = {
     localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
     ignoreUndefinedProperties: true,
-  });
+  };
+  const databaseId = firebaseConfig.firestoreDatabaseId || undefined;
+  dbInstance = databaseId
+    ? initializeFirestore(getApp(), settings, databaseId)
+    : initializeFirestore(getApp(), settings);
   if (env.VITE_USE_EMULATORS === '1') {
     connectFirestoreEmulator(dbInstance, 'localhost', 8085);
   }

@@ -1,0 +1,115 @@
+{
+  "entities": {
+    "Player": {
+      "title": "Player",
+      "description": "User profile, character stats, progression, and state.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "classId": { "type": "string" },
+        "level": { "type": "number" },
+        "xp": { "type": "number" },
+        "coins": { "type": "number" },
+        "hearts": { "type": "number" },
+        "maxHearts": { "type": "number" },
+        "status": { "type": "string", "enum": ["alive", "fallen", "paused"] },
+        "timezone": { "type": "string" },
+        "lastActiveDay": { "type": "string" },
+        "attributes": { "type": "object" },
+        "streak": { "type": "object" },
+        "flags": { "type": "object" },
+        "settings": { "type": "object" }
+      },
+      "required": ["uid", "name", "classId", "level", "xp", "coins", "hearts", "maxHearts", "status"]
+    },
+    "Mission": {
+      "title": "Mission",
+      "description": "A habit, daily task, main quest or workout.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "attribute": { "type": "string" },
+        "type": { "type": "string" },
+        "difficulty": { "type": "string" },
+        "xp": { "type": "number" },
+        "coins": { "type": "number" },
+        "requiresPhoto": { "type": "boolean" },
+        "schedule": { "type": "object" },
+        "estimatedMinutes": { "type": "number" },
+        "heartsOnFail": { "type": "number" },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "name", "attribute", "type", "difficulty", "xp", "coins", "active"]
+    },
+    "Reward": {
+      "title": "Reward",
+      "description": "Shop reward redeemable for player coins.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "cost": { "type": "number" },
+        "icon": { "type": "string" },
+        "cooldownDays": { "type": "number" },
+        "active": { "type": "boolean" }
+      },
+      "required": ["id", "title", "cost", "active"]
+    },
+    "Completion": {
+      "title": "Completion",
+      "description": "Immutable log of completed missions.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "missionId": { "type": "string" },
+        "day": { "type": "string" },
+        "timestamp": { "type": "string" },
+        "xpAwarded": { "type": "number" },
+        "coinsAwarded": { "type": "number" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "missionId", "day", "timestamp", "xpAwarded", "coinsAwarded"]
+    },
+    "Evidence": {
+      "title": "Evidence",
+      "description": "Photographic evidence submitted for mission completion.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "missionId": { "type": "string" },
+        "completionId": { "type": "string" },
+        "day": { "type": "string" },
+        "sizeBytes": { "type": "number" },
+        "dataUrl": { "type": "string" },
+        "archived": { "type": "boolean" }
+      },
+      "required": ["id", "missionId", "completionId", "day", "sizeBytes"]
+    }
+  },
+  "firestore": {
+    "/players/{uid}": {
+      "schema": "Player",
+      "description": "Stores user character and progression data."
+    },
+    "/players/{uid}/missions/{id}": {
+      "schema": "Mission",
+      "description": "Player's active and archived missions."
+    },
+    "/players/{uid}/rewards/{id}": {
+      "schema": "Reward",
+      "description": "Player's custom shop rewards."
+    },
+    "/players/{uid}/completions/{id}": {
+      "schema": "Completion",
+      "description": "Log of completed missions for streaks and analytics."
+    },
+    "/players/{uid}/evidence/{id}": {
+      "schema": "Evidence",
+      "description": "Photo evidence of verified actions."
+    }
+  }
+}

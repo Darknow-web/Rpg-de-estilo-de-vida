@@ -5,7 +5,13 @@
 import { GoogleGenAI } from '@google/genai';
 import { z } from 'zod';
 
-export const MODEL_ID = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash-lite';
+export const MODEL_ID = process.env.GEMINI_MODEL ?? 'gemini-3.6-flash';
+const CANDIDATE_MODELS = [
+  MODEL_ID,
+  'gemini-3.6-flash',
+  'gemini-3.5-flash',
+  'gemini-3.8-flash',
+].filter((v, i, a) => a.indexOf(v) === i);
 
 let client: GoogleGenAI | null = null;
 export function aiAvailable(): boolean {
@@ -60,35 +66,47 @@ export async function structuredCall<T extends z.ZodType>(opts: {
   images?: InlineImage[];
 }): Promise<z.infer<T>> {
   if (!aiAvailable()) throw new AiError('GEMINI_API_KEY ausente', 'unavailable');
+
+  const parts = [
+    ...(opts.images ?? []).map((img) => ({ inlineData: { mimeType: img.mimeType, data: img.data } })),
+    { text: opts.user },
+  ];
+
+  let lastError: Error | null = null;
   let text: string | undefined;
-  try {
-    const parts = [
-      ...(opts.images ?? []).map((img) => ({ inlineData: { mimeType: img.mimeType, data: img.data } })),
-      { text: opts.user },
-    ];
-    const res = await getClient().models.generateContent({
-      model: MODEL_ID,
-      contents: [{ role: 'user', parts }],
-      config: {
-        systemInstruction: opts.system,
-        responseMimeType: 'application/json',
-        responseJsonSchema: toGeminiSchema(opts.schema),
-        temperature: opts.temperature ?? 0.7,
-        maxOutputTokens: opts.maxOutputTokens ?? 4096,
-      },
-    });
-    text = res.text;
-  } catch (err) {
-    const msg = (err as Error).message ?? String(err);
+
+  for (const modelName of CANDIDATE_MODELS) {
+    try {
+      const res = await getClient().models.generateContent({
+        model: modelName,
+        contents: [{ role: 'user', parts }],
+        config: {
+          systemInstruction: opts.system,
+          responseMimeType: 'application/json',
+          responseJsonSchema: toGeminiSchema(opts.schema),
+          temperature: opts.temperature ?? 0.7,
+          maxOutputTokens: opts.maxOutputTokens ?? 4096,
+        },
+      });
+      text = res.text;
+      if (text) break;
+    } catch (err) {
+      lastError = err as Error;
+      console.warn(`[ai] fallo con modelo ${modelName}:`, (err as Error).message);
+    }
+  }
+
+  if (!text) {
+    const msg = lastError?.message ?? 'respuesta vacía de todos los modelos';
     const kind = /429|quota|RESOURCE_EXHAUSTED/i.test(msg) ? 'quota' : 'unknown';
     throw new AiError(msg, kind);
   }
-  if (!text) throw new AiError('respuesta vacía', 'invalid');
+
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
   } catch {
-    throw new AiError('JSON inválido', 'invalid');
+    throw new AiError('JSON inválido retornado por el modelo', 'invalid');
   }
   const result = opts.schema.safeParse(parsed);
   if (!result.success) {
