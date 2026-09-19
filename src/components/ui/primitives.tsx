@@ -75,7 +75,7 @@ export function TimeRing({ fraction, tone = 'xp', children, className = '', labe
   return (
     <span className={`tring ${tone === 'gold' || tone === 'hp' ? 'warn' : ''} ${className}`} style={{ '--c': RING_VAR[tone] } as CSSProperties} role="img" aria-label={label}>
       {children}
-      <svg className="ring" viewBox="0 0 100 100" aria-hidden="true">
+      <svg className="tring-svg" viewBox="0 0 100 100" aria-hidden="true">
         <circle className="track" cx="50" cy="50" r="47" />
         <circle className="val" cx="50" cy="50" r="47" strokeDasharray={C} strokeDashoffset={C * (1 - f)} />
       </svg>

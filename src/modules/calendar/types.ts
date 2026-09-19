@@ -1,5 +1,5 @@
 /**
- * Tipos del módulo Agenda (Google Calendar, solo lectura).
+ * Tipos del módulo Agenda (Google Calendar).
  * Los datos del calendario viven en el navegador (memoria + localStorage); nunca pasan por el servidor ni por Firestore.
  */
 

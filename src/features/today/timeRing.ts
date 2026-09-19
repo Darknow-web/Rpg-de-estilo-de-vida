@@ -31,7 +31,8 @@ export function ringFor(item: TodayItem, graceHours: number = GRACE.hoursAfterWi
   if (item.state === 'upcoming') {
     const until = item.window.minutesUntilOpen ?? 0;
     const opens = w === 'allDay' ? '' : `Abre a las ${w.start}`;
-    return { fraction: 1, tone: 'mute', text: `Abre en ${minutesToHuman(until)}`, long: `${opens} · en ${minutesToHuman(until)}`, show: true };
+    // Todavía no corre el tiempo: sin anillo, solo la hora de apertura.
+    return { fraction: 1, tone: 'mute', text: `Abre en ${minutesToHuman(until)}`, long: `${opens} · en ${minutesToHuman(until)}`, show: false };
   }
   if (item.state === 'grace') {
     const total = Math.max(1, graceHours * 60);

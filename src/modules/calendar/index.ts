@@ -1,5 +1,5 @@
 /**
- * Módulo Agenda: lee Google Calendar (solo lectura, todo en el navegador) y deja marcar eventos como
+ * Módulo Agenda: lee Google Calendar (todo en el navegador), deja marcar eventos como
  * compromisos → misión "Llegar a tiempo" sin apuestas (stakes 'none'). El core aplica ventana, XP,
  * bonus de adelanto, contador de puntualidad y medallas; el módulo no escribe XP ni corazones.
  *

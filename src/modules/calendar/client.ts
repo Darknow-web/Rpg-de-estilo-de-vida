@@ -91,7 +91,7 @@ export function loadGis(): Promise<void> {
 }
 
 /**
- * Pide un token de acceso de solo lectura.
+ * Pide un token de acceso (leer y escribir eventos; la app solo escribe lo que el jugador confirma).
  * - `interactive: true` → pantalla de consentimiento (primera vez o al reconectar).
  * - `interactive: false` → intento silencioso (prompt ''), que GIS resuelve sin preguntar si el jugador ya consintió.
  * Devuelve el token vigente si aún no venció.

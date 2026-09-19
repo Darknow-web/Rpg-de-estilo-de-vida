@@ -92,11 +92,14 @@ export function Tutorial() {
   const uid = useGame((s) => s.uid);
   const [i, setI] = useState(0);
   const track = useRef<HTMLDivElement>(null);
+  /** Momento del último desplazamiento programático: mientras dura la animación, el scroll no manda. */
+  const programmaticUntil = useRef(0);
   const last = i === SLIDES.length - 1;
 
   const go = (n: number) => {
     const k = Math.max(0, Math.min(SLIDES.length - 1, n));
     setI(k);
+    programmaticUntil.current = Date.now() + 700;
     track.current?.scrollTo({ left: k * track.current.clientWidth, behavior: 'smooth' });
   };
 
@@ -106,7 +109,10 @@ export function Tutorial() {
     let t = 0;
     const onScroll = () => {
       window.clearTimeout(t);
-      t = window.setTimeout(() => setI(Math.round(el.scrollLeft / Math.max(1, el.clientWidth))), 80);
+      t = window.setTimeout(() => {
+        if (Date.now() < programmaticUntil.current) return;
+        setI(Math.round(el.scrollLeft / Math.max(1, el.clientWidth)));
+      }, 120);
     };
     el.addEventListener('scroll', onScroll, { passive: true });
     return () => el.removeEventListener('scroll', onScroll);

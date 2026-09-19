@@ -81,10 +81,17 @@ try {
   }
   await page.getByRole('button', { name: 'Empezar a jugar' }).click();
 
-  // Hoy
+  // Hoy: 6 pestañas desde el primer día, sección "Para hoy" y cronómetro
   await page.getByText(/^Buen(os|as) (días|tardes|noches),$/).waitFor({ timeout: 20000 });
+  const tabs = await page.locator('nav.dock a').count();
+  if (tabs !== 6) fail(`el dock muestra ${tabs} pestañas (esperaba 6)`);
+  await page.getByText('Para hoy', { exact: true }).waitFor({ timeout: 10000 });
+  // Anillo solo cuando la ventana ya corre; fuera de horario (madrugada en Lima) las filas dicen "Abre en…".
+  const rings = await page.locator('.tring').count();
+  const upcoming = await page.getByText(/Abre en/).count();
+  if (rings < 1 && upcoming < 1) fail('ni cronómetro (anillo) ni hora de apertura en las misiones');
   await shot('today');
-  const cards = page.locator('.card', { hasText: 'Foto y completar' });
+  const cards = page.locator('.card', { hasText: /Foto( y completar)?/ });
   const n = await cards.count();
   if (n < 1) fail('no hay misiones completables hoy');
 
@@ -94,7 +101,8 @@ try {
   fs.writeFileSync(tmp, Buffer.from(pngBase64, 'base64'));
   const input = page.locator('input[type=file][capture]').first();
   await input.setInputFiles(tmp);
-  await page.getByText(/\+\d+ XP/).first().waitFor({ timeout: 20000 });
+  // La recompensa se refleja en la píldora de XP del héroe (la tarjeta de "+XP" dura 1,7 s y puede no coincidir con el sondeo).
+  await page.waitForFunction(() => /[1-9]\d* XP/.test(document.querySelector('.pill.xp')?.textContent ?? ''), null, { timeout: 20000 });
   await shot('reward');
   await page.waitForTimeout(2600);
   const done = await page.getByText('Hecha', { exact: true }).count();
@@ -125,18 +133,35 @@ try {
   await page.getByRole('button', { name: 'Guardar en la tienda' }).click();
   await page.waitForTimeout(800);
 
-  // Árbol (aparece al tener puntos)
-  await page.getByRole('link', { name: 'Árbol' }).click().catch(() => null);
-  await page.waitForTimeout(500);
+  // Árbol: siempre visible, con el modelo explicado y requisitos por nodo
+  await page.getByRole('link', { name: 'Árbol' }).click();
+  await page.getByText('Cómo funciona:').waitFor({ timeout: 10000 });
+  const reqs = await page.locator('.nodewrap .req').count();
+  if (reqs < 1) fail('el árbol no muestra requisitos de nivel en los nodos bloqueados');
   await shot('skills');
+  // Detalle de misión: bloque "Qué hacer"
+  await page.goto(`${BASE}/`);
+  await page.locator('.list a.row').first().click();
+  await page.getByText('Qué hacer', { exact: true }).waitFor({ timeout: 10000 });
+  await shot('mission-detail');
   await page.goto(`${BASE}/week`);
   await page.waitForTimeout(800);
   await shot('week');
   await page.getByRole('button', { name: 'Agenda' }).click().catch(() => null);
-  await page.waitForTimeout(500);
+  await page.getByText('Agregar pendientes', { exact: true }).waitFor({ timeout: 10000 });
   await shot('agenda');
+  await page.getByText('Agregar pendientes', { exact: true }).click();
+  await page.getByPlaceholder(/una tarea por línea/).fill('Comprar pilas\nLlamar al banco');
+  await page.getByRole('button', { name: 'Agregar a la lista' }).click();
+  await page.getByText('Tu lista', { exact: true }).waitFor();
+  await shot('agenda-tasks');
+  await page.getByRole('button', { name: /Planificar en mis huecos/ }).click();
+  // Sin Gemini en el emulador: la IA no está y se muestra el aviso para escribir a mano
+  await page.getByText(/no está disponible|Sin conexión|a mano/).waitFor({ timeout: 30000 });
+  await shot('agenda-plan-unavailable');
+  await page.keyboard.press('Escape').catch(() => null);
   await page.goto(`${BASE}/gym`);
-  await page.waitForTimeout(800);
+  await page.getByText('Cómo funciona el gimnasio').waitFor({ timeout: 10000 });
   await shot('gym');
 
   // Cerrar sesión y entrar con otra cuenta: no ve nada

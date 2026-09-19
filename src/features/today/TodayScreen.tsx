@@ -345,7 +345,7 @@ function MissionRow({ item, onPhoto, weekly }: { item: TodayItem; onPhoto: (f: F
       </Chip>
     ) : canComplete ? (
       <CameraButton onPhoto={onPhoto} allowGallery={false} className="btn sm auto">
-        Foto y completar
+        Foto
       </CameraButton>
     ) : (
       <span className="s num" style={{ margin: 0 }}>
@@ -366,10 +366,14 @@ function MissionRow({ item, onPhoto, weekly }: { item: TodayItem; onPhoto: (f: F
         )
       }
       title={
-        <span className="row" style={{ gap: 6 }}>
-          <span className="truncate">{m.name}</span>
-          {m.origin === 'agenda' && <Chip color="var(--color-system)">Agenda</Chip>}
-        </span>
+        <>
+          {m.name}
+          {m.origin === 'agenda' && (
+            <Chip color="var(--color-system)" className="ml-2">
+              Agenda
+            </Chip>
+          )}
+        </>
       }
       strike={item.state === 'done'}
       sub={

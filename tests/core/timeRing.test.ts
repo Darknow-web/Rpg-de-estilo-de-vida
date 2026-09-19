@@ -41,9 +41,9 @@ describe('cronómetro de misión', () => {
     expect(ringFor(item('expired', null)).show).toBe(false);
     expect(ringFor(item('failed', null)).text).toMatch(/corazón descontado/);
   });
-  it('próxima: anillo lleno apagado y hora de apertura', () => {
+  it('próxima: sin anillo (aún no corre el tiempo) y hora de apertura', () => {
     const r = ringFor(item('upcoming', null, { start: '19:00', end: '21:00' }, 120));
-    expect(r.tone).toBe('mute');
+    expect(r.show).toBe(false);
     expect(r.long).toBe('Abre a las 19:00 · en 2 h');
   });
 });

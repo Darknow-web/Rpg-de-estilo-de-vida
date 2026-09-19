@@ -24,7 +24,7 @@ export function eventTime(e: CalendarEvent, tz: string): string {
   return `${f(p.minutesOfDay)} – ${f(q.minutesOfDay)}`;
 }
 
-/** Agenda: 14 días de Google Calendar, solo lectura, con la acción "Marcar como compromiso". */
+/** Agenda: 14 días de Google Calendar, "Marcar como compromiso" y "Agregar pendientes" (planificador). Solo escribe lo que el jugador confirma. */
 export function AgendaScreen({ embedded }: { embedded?: boolean } = {}) {
   const ctx = useGameContext();
   const cal = useCalendar();
