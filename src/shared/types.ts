@@ -179,6 +179,8 @@ export interface Player {
     streakAbsorbedThisWeek: number;
     streakAbsorbedWeek: string;
     restDay: number | null;
+    /** Umbrales de racha (días) ya premiados con medalla; evita duplicados al rehacer una racha. */
+    medalDays?: number[];
     /** Última semana en la que se evaluaron las misiones semanales. */
     lastWeeklyCheck: string;
   };
@@ -306,7 +308,7 @@ export interface SystemLogEntry {
 
 export interface Medal {
   id: string;
-  kind: 'mastered' | 'automated' | 'chain' | 'boss' | 'rank' | 'resurrection' | 'main' | 'punctual';
+  kind: 'mastered' | 'automated' | 'chain' | 'boss' | 'rank' | 'resurrection' | 'main' | 'punctual' | 'streak';
   title: string;
   missionId?: string;
   chainId?: string;

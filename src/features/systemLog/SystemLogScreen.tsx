@@ -114,4 +114,5 @@ const ACTION_LABEL: Record<string, string> = {
   day_close: 'Cierre del día',
   commitment_missed: 'Compromiso no registrado',
   medal_punctual: 'Medalla Puntual',
+  medal_streak: 'Medalla de racha',
 };

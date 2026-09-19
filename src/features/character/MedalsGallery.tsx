@@ -34,12 +34,37 @@ export const MEDAL_DEFS: MedalDef[] = [
     art: `medal-rank-${r.toLowerCase()}`,
     earned: (ms) => ms.some((m) => m.kind === 'rank' && (m.title.includes(r) || (m as { rank?: string }).rank === r)),
   })),
-  { key: 'punctual', name: 'Puntual', cond: 'Llega a tiempo a tus compromisos', metal: 'bronze', glyph: 'timer', art: 'medal-punctual-bronze', earned: (ms) => ms.some((m) => (m.kind as string) === 'punctual') },
+  ...([
+    [7, 'bronze', 'bronce'],
+    [30, 'silver', 'plata'],
+    [100, 'gold', 'oro'],
+  ] as const).map<MedalDef>(([days, metal, name]) => ({
+    key: `streak_${days}`,
+    name: `Racha de ${days}`,
+    cond: `${days} días seguidos`,
+    metal,
+    glyph: 'flame',
+    art: `medal-streak-${days}-${metal}`,
+    earned: (ms) => ms.some((m) => m.id === `streak_${days}` || (m.kind === 'streak' && m.title.includes(name))),
+  })),
+  ...([
+    [10, 'bronze', 'bronce'],
+    [30, 'silver', 'plata'],
+    [100, 'gold', 'oro'],
+  ] as const).map<MedalDef>(([count, metal, name]) => ({
+    key: `punctual_${count}`,
+    name: `Puntual · ${name}`,
+    cond: `${count} llegadas a tiempo`,
+    metal,
+    glyph: 'timer',
+    art: `medal-punctual-${metal}`,
+    earned: (ms) => ms.some((m) => m.id === `punctual_${count}` || (m.kind === 'punctual' && m.title.includes(name))),
+  })),
 ];
 
 /** Arte para una medalla concreta ya ganada. */
 export function medalArt(m: Medal): ReactNode {
-  const def = MEDAL_DEFS.find((d) => (d.key.startsWith('rank_') ? m.kind === 'rank' && (m.title.includes(d.letter!) || (m as { rank?: string }).rank === d.letter) : d.key === m.kind));
+  const def = MEDAL_DEFS.find((d) => (d.key.startsWith('rank_') ? m.kind === 'rank' && (m.title.includes(d.letter!) || (m as { rank?: string }).rank === d.letter) : d.key === m.id || d.key === m.kind));
   if (!def) return <MedalShield metal="gold" glyph="star" />;
   return <MedalShield metal={def.metal} glyph={def.glyph} letter={def.letter} art={def.art} />;
 }

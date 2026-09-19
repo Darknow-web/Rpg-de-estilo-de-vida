@@ -6,7 +6,7 @@
  *   aplica interés compuesto y activa el bonus de descanso.
  * - Devuelve un resumen claro (nunca una pantalla de culpa) y deja todo en systemLog.
  */
-import type { Failure, Mission, Player } from '@/shared/types';
+import type { Failure, Medal, Mission, Player } from '@/shared/types';
 import { addDays, daysBetween, isScheduledOn, parseHHmm, weekKey, weekdayOf, zonedParts, monthKey, windowFor } from '@/lib/time';
 import { batch, commitSoon, playerRef, subDoc, clean } from '@/core/repo';
 import { newId, nowIso } from '@/lib/ids';
@@ -14,7 +14,9 @@ import { applyMasteryFail } from '@/core/mastery/mastery';
 import { applyDamage, heartsLossFor, regenForCleanDay, revive, maxHearts } from '@/core/hearts/hearts';
 import { buildLogEntry, logInBatch } from '@/lib/systemLog';
 import type { GameContext, FeedbackEvent } from '@/core/context';
-import { COINS } from '@/lib/game-balance';
+import { COINS, STREAK } from '@/lib/game-balance';
+
+const STREAK_TIER_NAMES = ['bronce', 'plata', 'oro'] as const;
 import { checkHiddenMissions } from '@/core/missions/hidden';
 import { getModule } from '@/core/module';
 
@@ -245,6 +247,20 @@ export async function runCatchup(ctx: GameContext): Promise<CatchupSummary> {
         } else if (scheduledCount > 0) {
           player.streak.current += 1;
           player.streak.best = Math.max(player.streak.best, player.streak.current);
+          // Medallas de racha: una por umbral, solo la primera vez que se cruza.
+          const tier = (STREAK.medalDays as readonly number[]).indexOf(player.streak.current);
+          if (tier >= 0) {
+            const days = STREAK.medalDays[tier];
+            const id = `streak_${days}`;
+            const awarded = player.streak.medalDays ?? [];
+            if (!awarded.includes(days)) {
+              player.streak.medalDays = [...awarded, days];
+              const medal: Medal = { id, kind: 'streak', title: `Racha de ${days} días (${STREAK_TIER_NAMES[tier] ?? 'oro'})`, awardedAt: nowIso() };
+              b.set(subDoc(ctx.uid, 'medals', medal.id), medal);
+              summary.events.push({ kind: 'medal', title: medal.title });
+              logInBatch(b, ctx.uid, buildLogEntry('medal_streak', `${days} días seguidos sin fallar: medalla "${medal.title}".`));
+            }
+          }
         }
         // Regeneración: día limpio (sin corazones perdidos)
         if (dayHeartsLost === 0 && player.status === 'alive' && player.hearts.current < maxHearts(ctx.effects)) {

@@ -279,7 +279,8 @@ export const HEARTS = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const GRACE = { hoursAfterWindow: 3 } as const;
-export const STREAK = { impossibleDaysPerMonth: 2, warnBeforeBreak: true } as const;
+/** Racha: medallas de bronce/plata/oro al cruzar estos días seguidos (se otorgan en el catch-up, una sola vez cada una). */
+export const STREAK = { impossibleDaysPerMonth: 2, warnBeforeBreak: true, medalDays: [7, 30, 100] as const } as const;
 export const NOTIFICATIONS = { maxPerDay: 4, closingWarningMinutes: 30 } as const;
 export const EVIDENCE = {
   maxLongSide: 800,
