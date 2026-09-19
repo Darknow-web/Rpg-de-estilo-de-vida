@@ -24,5 +24,6 @@ Principio rector: **automático por defecto, pero nunca a escondidas**. Toda acc
 | Planificar hasta 4 avisos push | Cada apertura | Desactivar permiso | Ajustes |
 | Archivar un compromiso de agenda vencido (sin corazones ni racha; +1 al contador de puntualidad) | Al vencer la hora del evento | No (queda anotado) | Historial, Agenda |
 | Otorgar medalla Puntual (bronce/plata/oro) | 10/30/100 llegadas a tiempo | — | Personaje, Historial |
+| Otorgar medalla de racha (bronce/plata/oro) | 7/30/100 días seguidos, una sola vez por umbral | — | Personaje, Historial |
 
 Lo que el sistema **nunca** hace solo: borrar historial, bajar precios, quitar XP ya ganada, castigar más de una semana, decidir qué le importa al jugador.
