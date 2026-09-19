@@ -300,7 +300,11 @@ export const TIME = { clockSkewWarnMinutes: 10 } as const;
  * Máximo `maxPerDay` compromisos por día; medallas Puntual (bronce/plata/oro) al acumular `medalCounts` llegadas a tiempo.
  */
 export const PUNCTUALITY = { windowMinutes: 60, earlyMinutes: 10, earlyBonus: 0.5, maxPerDay: 3, medalCounts: [10, 30, 100] as const } as const;
-export const ONBOARDING = { maxRegenerations: 3, dailyMissions: 3 } as const;
+/**
+ * Onboarding: la IA propone entre `dailyMissions.min` y `dailyMissions.max` diarias según el tiempo real declarado
+ * (≤15 min → 3, 30 min → 4, ≥1 h → hasta 5). El set local de respaldo usa siempre el mínimo.
+ */
+export const ONBOARDING = { maxRegenerations: 3, dailyMissions: { min: 3, max: 5 } } as const;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ÁRBOL DE HABILIDADES (32 nodos) — cada nodo CAMBIA UNA REGLA del juego

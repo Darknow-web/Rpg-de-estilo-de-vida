@@ -15,7 +15,7 @@ export type MissionType = 'daily' | 'weekly' | 'main' | 'side' | 'boss' | 'hidde
 export type MasteryState = 'new' | 'progress' | 'consolidated' | 'mastered' | 'automated';
 export type ModuleId = 'habits' | 'gym' | 'calendar';
 export type PlayerStatus = 'alive' | 'fallen' | 'paused';
-export type MissionOrigin = 'onboarding' | 'ai-proposal' | 'player' | 'escalation' | 'resurrection' | 'gym' | 'fallback' | 'calendar';
+export type MissionOrigin = 'onboarding' | 'ai-proposal' | 'player' | 'escalation' | 'resurrection' | 'gym' | 'fallback' | 'calendar' | 'agenda';
 /** Qué se arriesga al fallar: 'normal' = corazones y racha; 'none' = solo el contador de puntualidad (compromisos de agenda). */
 export type MissionStakes = 'normal' | 'none';
 
@@ -192,7 +192,12 @@ export interface Player {
     notificationsSentToday: number;
     storageWarned: boolean;
     seenIntro: string[];
+    /** Histórico: antes gateaba pestañas. Hoy todas se ven; se conserva para no romper documentos viejos. */
     unlockedViews: string[];
+    /** Pestañas que el jugador decidió ocultar del dock ('week' | 'skills' | 'gym'). */
+    hiddenViews?: string[];
+    /** Tutorial de bienvenida visto (se muestra una vez tras aceptar la campaña). */
+    tutorialDone?: boolean;
   };
   campaign: {
     explanation: CampaignExplanation;

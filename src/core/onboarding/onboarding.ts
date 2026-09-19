@@ -52,7 +52,7 @@ export interface ApplyCampaignInput {
   output: OnboardingOutput;
   source: 'ai' | 'fallback';
   classId: ClassId;
-  /** Misiones diarias/semanales tal como quedaron tras editar (máx 3 diarias). */
+  /** Misiones diarias/semanales tal como quedaron tras editar (entre ONBOARDING.dailyMissions.min y .max diarias). */
   daily: OnboardingOutput['misiones_diarias'];
   weekly: OnboardingOutput['misiones_semanales'];
   main: OnboardingOutput['mision_principal'] | null;
@@ -128,7 +128,7 @@ export async function applyCampaign(uid: string, player: Player, existingMission
   }
 
   const created: Mission[] = [];
-  for (const d of input.daily.slice(0, ONBOARDING.dailyMissions)) {
+  for (const d of input.daily.slice(0, ONBOARDING.dailyMissions.max)) {
     const m = buildMission(templateFromDaily(d), input.source === 'ai' ? 'onboarding' : 'fallback', today);
     b.set(subDoc(uid, 'missions', m.id), clean(m));
     created.push(m);

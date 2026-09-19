@@ -17,7 +17,9 @@ type Step = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 'generating' | 'review';
 const TRIED = ['Apps de hábitos', 'Listas en papel', 'Gimnasio con plan', 'Pagar un curso', 'Prometerlo en año nuevo', 'Un compañero que me controle', 'Castigarme', 'Nada aún'];
 const SYSLINES = ['Analizando tus objetivos…', 'Buscando el gancho de tu campaña…', 'Leyendo lo que no funcionó…', 'Midiendo tu tiempo real…', 'Detectando tu mejor momento…', 'Anticipando lo que te frena…', 'Localizando tus anclas…', 'Diseñando tu tienda…'];
 
-const EMPTY: InterviewAnswers = { q1_goal: '', q2_why: '', q3_tried: [], q4_time: '30', q5_moment: 'morning', q6_demotivator: 'no_results', q7_anchors: '', q8_rewards: '' };
+const ANCHOR_EXAMPLES = ['lavarme los dientes', 'tomar café', 'desayunar', 'almorzar', 'llegar del trabajo', 'cenar', 'apagar la luz'];
+
+const EMPTY: InterviewAnswers ={ q1_goal: '', q2_why: '', q3_tried: [], q4_time: '30', q5_moment: 'morning', q6_demotivator: 'no_results', q7_anchors: '', q8_rewards: '' };
 
 /**
  * Creación de personaje: 8 preguntas en menos de 3 minutos, opciones tocables, un texto libre con dictado.
@@ -71,7 +73,7 @@ export function Onboarding() {
         output: gen.output,
         source: gen.source,
         classId,
-        daily: daily.slice(0, ONBOARDING.dailyMissions),
+        daily: daily.slice(0, ONBOARDING.dailyMissions.max),
         weekly,
         main: gen.output.mision_principal,
         rewards,
@@ -167,6 +169,9 @@ export function Onboarding() {
         </Card>
 
         <Label right={`${totalMin} min en total`}>{daily.length} misiones diarias</Label>
+        <p className="s" style={{ margin: '-6px 4px 0' }}>
+          Cada una es una acción pequeña con hora y prueba en foto. Entre {ONBOARDING.dailyMissions.min} y {ONBOARDING.dailyMissions.max} al inicio; el cupo crece jugando.
+        </p>
         {daily.map((d, i) => (
           <Card key={i}>
             {editIdx === i ? (
@@ -202,6 +207,17 @@ export function Onboarding() {
                     <Icon id="edit" />
                     Editar
                   </button>
+                  {daily.length > ONBOARDING.dailyMissions.min && (
+                    <button
+                      className="chip ghost"
+                      onClick={() => {
+                        setRejectedNames((r) => [...r, d.nombre]);
+                        setDaily((ds) => ds.filter((_, j) => j !== i));
+                      }}
+                    >
+                      Quitar
+                    </button>
+                  )}
                   <button
                     className="chip ghost"
                     onClick={() => {
@@ -294,7 +310,7 @@ export function Onboarding() {
         </Card>
 
         <div className="space-y-2 pb-4">
-          <button className="btn gold" onClick={accept} disabled={busy || daily.length !== 3}>
+          <button className="btn gold" onClick={accept} disabled={busy || daily.length < ONBOARDING.dailyMissions.min || daily.length > ONBOARDING.dailyMissions.max}>
             {busy ? 'Guardando…' : redo ? 'Aceptar la nueva campaña' : 'Aceptar y empezar a jugar'}
           </button>
           <button className="btn ghost" disabled={regen >= ONBOARDING.maxRegenerations} onClick={() => run({ missions: [...rejectedNames, ...daily.map((d) => d.nombre)], class: classId !== gen.output.clase.id ? gen.output.clase.id : undefined })}>
@@ -355,8 +371,28 @@ export function Onboarding() {
           </Q>
         )}
         {stepNum === 6 && (
-          <Q title="¿Qué haces ya todos los días sin falta?" hint="Son las anclas para enganchar hábitos nuevos: 'lavarme los dientes', 'tomar café', 'llegar del trabajo'…">
+          <Q title="¿Qué haces ya todos los días sin falta?" hint="Son las anclas: cada misión nueva se engancha justo después de una de estas. Tiene que ser algo de TODOS los días, no de fin de semana.">
             <VoiceInput value={a.q7_anchors} onChange={(v) => setA({ ...a, q7_anchors: v })} placeholder="Ej.: me lavo los dientes, tomo café, ceno a las 8…" rows={2} />
+            <div className="flex flex-wrap gap-2 mt-3">
+              {ANCHOR_EXAMPLES.map((ex) => {
+                const on = a.q7_anchors.toLowerCase().includes(ex.toLowerCase());
+                return (
+                  <button
+                    key={ex}
+                    type="button"
+                    className={`chip ${on ? '' : 'ghost'}`}
+                    style={{ '--c': 'var(--color-system)', height: 32, fontSize: 12.5 } as CSSProperties}
+                    onClick={() => {
+                      if (on) return;
+                      const cur = a.q7_anchors.trim();
+                      setA({ ...a, q7_anchors: cur ? `${cur.replace(/[,.;]\s*$/, '')}, ${ex}` : ex });
+                    }}
+                  >
+                    {ex}
+                  </button>
+                );
+              })}
+            </div>
           </Q>
         )}
         {stepNum === 7 && (

@@ -62,6 +62,27 @@ export function IconSquare({ icon, color, size, className = '' }: { icon: IconId
   );
 }
 
+export type TimeRingTone = 'xp' | 'gold' | 'hp' | 'mute';
+const RING_VAR: Record<TimeRingTone, string> = { xp: 'var(--color-xp)', gold: 'var(--color-gold)', hp: 'var(--color-hp)', mute: 'var(--color-mute)' };
+
+/**
+ * Cronómetro minimalista: anillo de 2 px alrededor de un icono que se vacía a medida que se acaba la ventana.
+ * `fraction` es la parte que QUEDA (1 = recién abierta, 0 = cerrada). Cian → oro en la última media hora → rojo en gracia.
+ */
+export function TimeRing({ fraction, tone = 'xp', children, className = '', label }: { fraction: number; tone?: TimeRingTone; children: ReactNode; className?: string; label?: string }) {
+  const f = Math.max(0, Math.min(1, fraction));
+  const C = 2 * Math.PI * 47;
+  return (
+    <span className={`tring ${tone === 'gold' || tone === 'hp' ? 'warn' : ''} ${className}`} style={{ '--c': RING_VAR[tone] } as CSSProperties} role="img" aria-label={label}>
+      {children}
+      <svg className="ring" viewBox="0 0 100 100" aria-hidden="true">
+        <circle className="track" cx="50" cy="50" r="47" />
+        <circle className="val" cx="50" cy="50" r="47" strokeDasharray={C} strokeDashoffset={C * (1 - f)} />
+      </svg>
+    </span>
+  );
+}
+
 export function Pill({ children, tone = 'soft', icon, className = '' }: { children: ReactNode; tone?: 'gold' | 'xp' | 'soft'; icon?: IconId; className?: string }) {
   return (
     <span className={`pill ${tone} ${className}`}>
@@ -227,10 +248,10 @@ export function PageHead({ title, action, back = true, onBack }: { title: string
 }
 
 /** Fila compacta: icono tintado, título, subtítulo, valor a la derecha. */
-export function Row({ icon, color, title, sub, right, to, onClick, chevron, strike }: { icon?: IconId; color?: string; title: ReactNode; sub?: ReactNode; right?: ReactNode; to?: string; onClick?: () => void; chevron?: boolean; strike?: boolean }) {
+export function Row({ icon, color, title, sub, right, to, onClick, chevron, strike, leading }: { icon?: IconId; color?: string; title: ReactNode; sub?: ReactNode; right?: ReactNode; to?: string; onClick?: () => void; chevron?: boolean; strike?: boolean; leading?: ReactNode }) {
   const inner = (
     <>
-      {icon && <IconSquare icon={icon} color={color ?? 'var(--color-system)'} size="sm" />}
+      {leading ?? (icon && <IconSquare icon={icon} color={color ?? 'var(--color-system)'} size="sm" />)}
       <div className="grow">
         <div className="t" style={{ fontSize: 14, color: strike ? 'var(--color-dim)' : undefined, textDecoration: strike ? 'line-through' : undefined }}>
           {title}

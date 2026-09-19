@@ -70,12 +70,17 @@ export function SkillsScreen() {
           {ctx.skills.length}/{SKILL_TREE.length}
         </span>
       </div>
-      <Card className="row">
-        <Pill tone={pts > 0 ? 'gold' : 'soft'} icon="star">
-          {pts} punto{pts === 1 ? '' : 's'}
-        </Pill>
-        <div className="grow s" style={{ margin: 0 }}>
-          Cada nodo cambia una regla del juego. Nada decorativo.
+      <Card>
+        <div className="row">
+          <Pill tone={pts > 0 ? 'gold' : 'soft'} icon="star">
+            {pts} punto{pts === 1 ? '' : 's'}
+          </Pill>
+          <div className="grow s" style={{ margin: 0 }}>
+            Cada nodo cambia una regla del juego. Nada decorativo.
+          </div>
+        </div>
+        <div className="s mt-3">
+          <b style={{ color: 'var(--color-ink)' }}>Cómo funciona:</b> ganas 1 punto por cada nivel general. Cada rama pide además un nivel mínimo de su atributo, y el atributo sube al completar misiones de esa área. Los nodos de una rama se abren en orden.
         </div>
       </Card>
       {msg && (
@@ -88,13 +93,15 @@ export function SkillsScreen() {
         const color = branch === 'trunk' ? 'var(--color-ink)' : ATTR_VAR[branch as AttributeId];
         const icon: IconId = branch === 'trunk' ? 'shield' : ATTR_ICON[branch as AttributeId];
         const available = nodes.filter((n) => nodeStatus(ctx, n).available && pts > 0);
+        const nextLocked = nodes.map((n) => nodeStatus(ctx, n)).find((s) => !s.unlocked && !s.available);
+        const attrLevel = branch === 'trunk' ? null : p.attributes[branch as AttributeId].level;
         return (
           <Card key={branch} style={{ '--c': color } as CSSProperties}>
             <Label
               right={
                 <span className="row" style={{ gap: 6 }}>
                   {branch === recommended && <Chip color="var(--color-xp)">recomendada</Chip>}
-                  {branch !== 'trunk' && <span>Nv {p.attributes[branch as AttributeId].level}</span>}
+                  {attrLevel !== null && <span className="num">Atributo Nv {attrLevel}</span>}
                 </span>
               }
             >
@@ -107,13 +114,22 @@ export function SkillsScreen() {
               {nodes.map((n, k) => {
                 const s = nodeStatus(ctx, n);
                 const cls = s.unlocked ? 'on' : s.available && pts > 0 ? 'av' : '';
+                const needsAttr = !s.unlocked && n.minAttrLevel && attrLevel !== null && attrLevel < n.minAttrLevel;
                 return (
                   <span key={n.id} style={{ display: 'contents' }}>
                     {k > 0 && <span className={`link ${s.unlocked ? 'on' : ''}`} />}
-                    <button type="button" className={`node ${cls} ${sel?.id === n.id ? 'sel' : ''}`} title={SKILL_TEXTS[n.id].name} onClick={() => setSel(n)}>
-                      <Icon id={NODE_ICON[n.id] ?? icon} />
-                      {!s.unlocked && <span className="cost num">{n.cost}</span>}
-                    </button>
+                    <span className="nodewrap">
+                      <button type="button" className={`node ${cls} ${sel?.id === n.id ? 'sel' : ''}`} title={SKILL_TEXTS[n.id].name} aria-label={`${SKILL_TEXTS[n.id].name}${needsAttr ? `, requiere nivel ${n.minAttrLevel}` : ''}`} onClick={() => setSel(n)}>
+                        <Icon id={NODE_ICON[n.id] ?? icon} />
+                        {!s.unlocked && <span className="cost num">{n.cost}</span>}
+                      </button>
+                      {needsAttr ? (
+                        <span className="req num">
+                          <Icon id="lock" />
+                          Nv {n.minAttrLevel}
+                        </span>
+                      ) : null}
+                    </span>
                   </span>
                 );
               })}
@@ -127,10 +143,12 @@ export function SkillsScreen() {
                 ))
               ) : nodes.every((n) => nodeStatus(ctx, n).unlocked) ? (
                 'Rama completa.'
-              ) : pts === 0 ? (
-                'Sube de nivel para ganar puntos.'
+              ) : nextLocked ? (
+                <>
+                  <b style={{ color: 'var(--color-ink)' }}>Siguiente: {SKILL_TEXTS[nextLocked.node.id].name}</b> · {nextLocked.reasons.join(' · ')}
+                </>
               ) : (
-                'Sube este atributo o desbloquea el nodo anterior.'
+                'Sube de nivel para ganar puntos.'
               )}
             </div>
           </Card>

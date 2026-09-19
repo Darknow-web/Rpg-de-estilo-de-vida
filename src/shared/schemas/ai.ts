@@ -72,7 +72,7 @@ export const onboardingOutputSchema = z.object({
     hitos: z.array(z.string().max(120)).min(3).max(5),
     plazo_estimado_semanas: z.number().int().min(4).max(52),
   }),
-  misiones_diarias: z.array(dailyMissionSchema).length(3),
+  misiones_diarias: z.array(dailyMissionSchema).min(3).max(5),
   misiones_semanales: z.array(weeklyMissionSchema).min(1).max(2),
   recompensas_sugeridas: z.array(rewardSuggestionSchema).min(4).max(6),
   explicacion: z.object({

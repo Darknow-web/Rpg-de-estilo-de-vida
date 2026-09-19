@@ -2,7 +2,7 @@
  * Cupo de misiones activas: impone "empezar pequeño" y explica en lenguaje de juego.
  */
 import type { Mission, MissionType, Player } from '@/shared/types';
-import { rankIndex, nextRank, XP_TABLE } from '@/lib/game-balance';
+import { rankIndex, nextRank, XP_TABLE, ONBOARDING } from '@/lib/game-balance';
 import { quotaMax, type ActiveEffects } from '@/core/skills/effects';
 
 export interface QuotaInfo {
@@ -25,8 +25,12 @@ export function activeOfType(missions: Mission[], type: MissionType): Mission[] 
 }
 
 export function quotaFor(type: MissionType, player: Player, missions: Mission[], effects: ActiveEffects): QuotaInfo {
-  const used = activeOfType(missions, type).length;
-  const max = quotaMax(type, rankIndex(player.level.rank), countMastered(missions), effects);
+  const active = activeOfType(missions, type);
+  const used = active.length;
+  // La campaña inicial puede traer hasta ONBOARDING.dailyMissions.max diarias (la IA decide 3–5 según el tiempo real);
+  // esas no se "pasan" del cupo: el cupo base se estira hasta ellas y sigue creciendo por rango y dominio desde ahí.
+  const fromCampaign = type === 'daily' ? active.filter((m) => m.origin === 'onboarding' || m.origin === 'fallback').length : 0;
+  const max = Math.max(quotaMax(type, rankIndex(player.level.rank), countMastered(missions), effects), Math.min(fromCampaign, ONBOARDING.dailyMissions.max));
   const allowed = used < max;
   let reason: string | null = null;
   let nextUnlock: string | null = null;

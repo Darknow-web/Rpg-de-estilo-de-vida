@@ -50,8 +50,6 @@ export function MissionDetail() {
             </div>
           </div>
         </div>
-        <p className="s mt-3">{m.description}</p>
-        {m.anchor && <p className="s mt-1">Ancla: {m.anchor}</p>}
         <div className="row mt-4" style={{ gap: 8, flexWrap: 'wrap' }}>
           <Chip color="var(--color-xp)" icon="zap">
             +{m.xp} XP
@@ -70,6 +68,34 @@ export function MissionDetail() {
             {m.estimatedMinutes} min
           </Chip>
         </div>
+      </Card>
+
+      <Card>
+        <Label>Qué hacer</Label>
+        <p className="mt-2" style={{ fontSize: 14, lineHeight: 1.45 }}>
+          {m.description}
+        </p>
+        {m.anchor && (
+          <p className="s mt-2">
+            <b style={{ color: 'var(--color-ink)' }}>Cuándo:</b> {m.anchor}
+            {m.schedule.window !== 'allDay' ? `, entre las ${m.schedule.window.start} y las ${m.schedule.window.end}` : ', en cualquier momento del día'}.
+          </p>
+        )}
+        {m.minimalVersion && m.minimalVersion.description && m.minimalVersion.description !== m.description && (
+          <p className="s mt-1">
+            <b style={{ color: 'var(--color-ink)' }}>Lo mínimo que cuenta:</b> {m.minimalVersion.description}
+          </p>
+        )}
+        {m.evidenceHint && (
+          <p className="s mt-1">
+            <b style={{ color: 'var(--color-ink)' }}>Prueba:</b> {m.evidenceHint}
+          </p>
+        )}
+        {m.stakes !== 'none' && m.schedule.window !== 'allDay' && (
+          <p className="s mt-1">
+            <b style={{ color: 'var(--color-ink)' }}>Si no la haces:</b> pierdes {m.heartsOnFail} corazón{m.heartsOnFail === 1 ? '' : 'es'} al cerrar la ventana (más {ctx.effects.graceHours} h de gracia a mitad de XP).
+          </p>
+        )}
       </Card>
 
       <Card tone="tight">

@@ -12,14 +12,16 @@ Justifica con una frase que cite la respuesta 1 o 2 del jugador.
 MISIÓN PRINCIPAL: su meta de 6 meses (respuesta 1) convertida en misión con 3 a 5 hitos concretos y verificables con foto.
 
 MISIONES DIARIAS — REGLAS INNEGOCIABLES (método Tiny Habits):
-1. Exactamente 3. Ni una más aunque el jugador pida diez. Si pidió más, dilo en estrategia_general: el cupo se gana jugando.
+1. Entre 3 y 5, según el tiempo real de la respuesta 4: 15 minutos → exactamente 3; 30 minutos → 4; 1 hora o más → 5 si la meta lo justifica, si no 4.
+   Nunca más de 5 aunque el jugador pida diez. Si pidió más, dilo en estrategia_general: el cupo se gana jugando.
 2. Cada una se redacta como intención de implementación: "Después de [ancla que el jugador ya hace todos los días, respuesta 7], haré [comportamiento mínimo]".
    Si el jugador no dio anclas útiles, usa un momento del día de la respuesta 5 como ancla y dilo.
 3. Comportamiento MÍNIMO VIABLE: tan pequeño que un día de baja motivación no genere excusa.
    "Leer 2 páginas", no "leer 30 minutos". "Ponerme la ropa de gimnasio e ir", no "entrenar 1 hora".
    NUNCA propongas la versión ambiciosa: el juego escala la exigencia después.
 4. Cada misión debe conectar con la meta de la respuesta 1 en una frase. Si no puedes, no va.
-5. La suma de duracion_minutos de las 3 diarias no puede superar el tiempo de la respuesta 4.
+5. La suma de duracion_minutos de todas las diarias no puede superar el tiempo de la respuesta 4.
+   Cada "descripcion" debe decir en una frase QUÉ hacer exactamente y CÓMO se sabe que está hecho; se muestra en la tarjeta de la misión.
 6. Programa las ventanas horarias en la franja de la respuesta 5 (mañana 06:00-12:00, tarde 12:00-19:00, noche 19:00-23:00, varía = "todo_el_dia").
 7. Dificultad siempre "easy" o "medium" en el onboarding.
 8. La foto de evidencia debe ser posible: describe en evidencia_sugerida qué foto probaría que se hizo.

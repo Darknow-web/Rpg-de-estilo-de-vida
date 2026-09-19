@@ -1,19 +1,26 @@
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet } from 'react-router-dom';
 import { useGame, useGameContext } from '@/state/game';
 import { FallenBanner } from '@/features/gameover/FallenBanner';
-import { rankIndex } from '@/lib/game-balance';
 import { Icon, type IconId } from './ui/Icon';
 
-/** Marco de la app: contenido + dock inferior de iconos (sin etiquetas, punto bajo el activo). */
+/** Pestañas que el jugador puede ocultar desde Ajustes. Hoy, Personaje y Tienda siempre se ven. */
+export const OPTIONAL_VIEWS = [
+  { id: 'week', label: 'Semana y Agenda' },
+  { id: 'skills', label: 'Árbol de habilidades' },
+  { id: 'gym', label: 'Gimnasio' },
+] as const;
+
+export function isViewHidden(hidden: string[] | undefined, id: string): boolean {
+  return Boolean(hidden?.includes(id));
+}
+
+/** Marco de la app: contenido + dock inferior de iconos (sin etiquetas, punto bajo el activo). Las 6 pestañas se ven desde el primer día. */
 export function Shell() {
   const ctx = useGameContext();
   const online = useGame((s) => s.online);
-  const location = useLocation();
   if (!ctx) return null;
   const p = ctx.player;
-  const showSkills = p.level.skillPointsEarned > 0 || p.flags.unlockedViews.includes('skills') || p.flags.advancedMode;
-  const showWeek = rankIndex(p.level.rank) >= 1 || p.flags.unlockedViews.includes('week') || p.flags.advancedMode || p.stats.missionsCompleted >= 5;
-  const showGym = p.flags.unlockedViews.includes('gym') || location.pathname.startsWith('/gym');
+  const hidden = p.flags.hiddenViews;
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-lg flex-col tinted">
@@ -24,10 +31,10 @@ export function Shell() {
       </main>
       <nav className="dock" aria-label="Navegación">
         <Tab to="/" icon="home" label="Hoy" />
-        {showWeek && <Tab to="/week" icon="cal" label="Semana" />}
+        {!isViewHidden(hidden, 'week') && <Tab to="/week" icon="cal" label="Semana" />}
         <Tab to="/character" icon="user" label="Personaje" />
-        {showSkills && <Tab to="/skills" icon="tree" label="Árbol" badge={p.level.skillPointsAvailable} />}
-        {showGym && <Tab to="/gym" icon="dumbbell" label="Gimnasio" />}
+        {!isViewHidden(hidden, 'skills') && <Tab to="/skills" icon="tree" label="Árbol" badge={p.level.skillPointsAvailable} />}
+        {!isViewHidden(hidden, 'gym') && <Tab to="/gym" icon="dumbbell" label="Gimnasio" />}
         <Tab to="/shop" icon="store" label="Tienda" />
       </nav>
     </div>

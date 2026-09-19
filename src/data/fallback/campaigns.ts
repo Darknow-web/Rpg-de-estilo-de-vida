@@ -153,11 +153,29 @@ export function pickArchetype(goal: string): ClassId {
   return hits[0].id;
 }
 
+/** Señales de que lo escrito no es una rutina DIARIA (día de la semana, deporte ocasional, frecuencia). */
+const NON_DAILY = /\b(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo|fin(es)? de semana|semanal|a veces|cada\s+\d|juego|partido|torneo|clase|entreno|entrenamiento|reuni[oó]n)\b/i;
+
+/**
+ * Ancla del método Tiny Habits a partir de la respuesta 7. Se toma la primera cláusula; si no parece
+ * algo que pase todos los días (o es demasiado larga), se usa el ancla genérica de la franja declarada.
+ */
+export function anchorFromAnswers(anchorsText: string, moment: Moment): string {
+  const raw = anchorsText.trim();
+  if (!raw) return ANCHOR_BY_MOMENT[moment];
+  const first = raw
+    .replace(/^(después de|despues de|luego de|cuando|al)\s+/i, '')
+    .split(/[,.;\n]|\s+y\s+/)[0]
+    .trim()
+    .replace(/^(yo\s+)/i, '');
+  if (!first || first.length < 3 || first.length > 40 || NON_DAILY.test(first)) return ANCHOR_BY_MOMENT[moment];
+  return `Después de ${first.charAt(0).toLowerCase()}${first.slice(1)}`;
+}
+
 export function fallbackCampaign(answers: OnboardingInput['answers'], forcedClass?: ClassId): OnboardingOutput {
   const classId = forcedClass ?? pickArchetype(answers.q1_goal);
   const spec = ARCHETYPES[classId];
-  const anchorFromPlayer = answers.q7_anchors.trim();
-  const anchor = anchorFromPlayer ? `Después de ${anchorFromPlayer.replace(/^después de\s*/i, '').split(/[,.;]/)[0].trim()}` : ANCHOR_BY_MOMENT[answers.q5_moment];
+  const anchor = anchorFromAnswers(answers.q7_anchors, answers.q5_moment);
   const ventana = WINDOWS[answers.q5_moment];
   const diarias = spec.diarias(anchor).map((d) => ({ ...d, dias: ALL_DAYS, ventana }));
   return {

@@ -18,6 +18,7 @@ import { useCalendar } from '@/modules/calendar/store';
 import { calendarConfigured } from '@/modules/calendar/client';
 import { Icon } from '@/components/ui/Icon';
 import { Bar, Card, Label, Notice, PageHead, Row } from '@/components/ui/primitives';
+import { OPTIONAL_VIEWS, isViewHidden } from '@/components/Shell';
 
 function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: ReactNode }) {
   return (
@@ -52,7 +53,11 @@ export function SettingsScreen() {
     b.set(playerRef(ctx.uid), clean(next));
     await commitSoon(b, log ?? 'settings');
   };
-  const setView = (view: string, on: boolean) => patch((pl) => (pl.flags.unlockedViews = on ? [...new Set([...pl.flags.unlockedViews, view])] : pl.flags.unlockedViews.filter((v) => v !== view)));
+  const setViewVisible = (view: string, visible: boolean) =>
+    patch((pl) => {
+      const hidden = pl.flags.hiddenViews ?? [];
+      pl.flags.hiddenViews = visible ? hidden.filter((v) => v !== view) : [...new Set([...hidden, view])];
+    }, 'settings:views');
 
   const usedFraction = p.stats.evidenceBytes / EVIDENCE.quotaBytes;
 
@@ -196,11 +201,21 @@ export function SettingsScreen() {
         </div>
       </Card>
 
-      <Label>Módulos</Label>
+      <Label>Pestañas visibles</Label>
       <Card className="flex flex-col gap-4 text-sm">
-        <Toggle on={p.flags.unlockedViews.includes('gym')} onChange={(v) => setView('gym', v)} label="Gimnasio (rutina que usa solo tu equipamiento)" />
-        <Toggle on={p.flags.unlockedViews.includes('week')} onChange={(v) => setView('week', v)} label="Vista Semana" />
-        <Toggle on={p.flags.unlockedViews.includes('skills')} onChange={(v) => setView('skills', v)} label="Árbol de habilidades" />
+        <p className="s" style={{ margin: 0 }}>
+          Hoy, Personaje y Tienda siempre se ven. Las demás las puedes ocultar del menú inferior; nada se borra.
+        </p>
+        {OPTIONAL_VIEWS.map((v) => (
+          <Toggle key={v.id} on={!isViewHidden(p.flags.hiddenViews, v.id)} onChange={(on) => setViewVisible(v.id, on)} label={v.label} />
+        ))}
+      </Card>
+
+      <Label>Ayuda</Label>
+      <Card tone="tight">
+        <div className="list">
+          <Row icon="book" color="var(--color-arcane)" title="Ver el tutorial" sub="Las 6 pantallas en un minuto" to="/tutorial" chevron />
+        </div>
       </Card>
 
       <Label>Fotos de evidencia</Label>

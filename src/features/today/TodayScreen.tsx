@@ -5,7 +5,7 @@ import { useUi } from '@/state/ui';
 import { buildToday, type TodayItem } from '@/core/missions/schedule';
 import { completeMission } from '@/core/completion/complete';
 import { CameraButton } from '@/components/ui/CameraButton';
-import { minutesToHuman, windowFor, weekdayOf, parseHHmm, zonedParts } from '@/lib/time';
+import { zonedParts } from '@/lib/time';
 import { pendingProposals } from '@/core/missions/proposals';
 import { ProposalCard } from './ProposalCard';
 import { declareImpossibleDay, impossibleDaysLeft } from '@/core/streaks/streaks';
@@ -17,11 +17,17 @@ import { closeDay, dayClosedToday } from '@/core/streaks/dayClose';
 import { levelProgress } from '@/core/character/player';
 import { Icon } from '@/components/ui/Icon';
 import { Hearts } from '@/components/ui/Hearts';
-import { ATTR_ICON, ATTR_VAR, Bar, Chip, CountUp, IconSquare, Label, Pill, Notice, EmptyState, Row } from '@/components/ui/primitives';
+import { ATTR_ICON, ATTR_VAR, Bar, Chip, CountUp, IconSquare, Label, Pill, Notice, EmptyState, Row, TimeRing } from '@/components/ui/primitives';
 import { CLASS_ICON } from '@/components/ui/primitives';
 import { NextEventCard } from '@/modules/calendar/ui/NextEventCard';
+import { ringFor, whatToDo, windowText } from './timeRing';
 
-/** HOY: ¿cómo voy? (héroe y racha) · ¿qué hago ahora? (una tarjeta activa) · ¿qué viene? (lista compacta). */
+const STATE_ORDER: Record<TodayItem['state'], number> = { grace: 0, active: 1, allDay: 2, upcoming: 3, expired: 4, failed: 5, done: 6 };
+
+/**
+ * HOY: ¿cómo voy? (héroe y racha) · PARA HOY (lo que hay que cumplir antes de dormir, la activa arriba con su cronómetro)
+ * · ESTA SEMANA (semanales) · CAMPAÑA (principal y boss).
+ */
 export function TodayScreen() {
   const ctx = useGameContext();
   const pushFeedback = useGame((s) => s.pushFeedback);
@@ -42,13 +48,15 @@ export function TodayScreen() {
   const dailyQuota = quotaFor('daily', ctx.player, ctx.missions, ctx.effects);
   const p = ctx.player;
   const lp = levelProgress(p.level.totalXp);
-  const active = view.timed.find((t) => t.state === 'active') ?? view.timed.find((t) => t.state === 'grace') ?? view.allDay.find((t) => t.state === 'allDay');
-  const everything = [...view.timed, ...view.allDay];
-  const allDone = everything.length > 0 && everything.every((t) => t.state === 'done' || t.state === 'failed');
-  const later = [...view.timed.filter((t) => t !== active), ...view.allDay.filter((t) => t !== active)];
+  const active = view.timed.find((t) => t.state === 'grace') ?? view.timed.find((t) => t.state === 'active') ?? view.allDay.find((t) => t.state === 'allDay');
+  const forToday = [...view.timed, ...view.allDay].sort((a, b) => STATE_ORDER[a.state] - STATE_ORDER[b.state] || a.sortKey - b.sortKey);
+  const pendingToday = forToday.filter((t) => t.state !== 'done' && t.state !== 'failed' && t.state !== 'expired').length;
+  const allDone = forToday.length > 0 && forToday.every((t) => t.state === 'done' || t.state === 'failed');
+  const rows = forToday.filter((t) => t !== active);
   const hour = zonedParts(ctx.now, ctx.tz).hour;
   const greeting = hour < 12 ? 'Buenos días,' : hour < 19 ? 'Buenas tardes,' : 'Buenas noches,';
   const impossibleLeft = impossibleDaysLeft(ctx);
+  const weeklyPending = view.weekly.filter((t) => t.state !== 'done').length;
 
   const onPhoto = async (item: TodayItem, file: File) => {
     setError(null);
@@ -146,13 +154,9 @@ export function TodayScreen() {
         </Notice>
       )}
 
-      {/* Ahora */}
-      {active ? (
-        <>
-          <Label right={<span className="num" style={{ color: 'var(--color-xp)' }}>{stateShort(active)}</span>}>Ahora</Label>
-          <ActiveMission item={active} onPhoto={(f) => onPhoto(active, f)} fallen={p.status === 'fallen'} resurrectionId={ctx.resurrection?.missionId} />
-        </>
-      ) : everything.length === 0 ? (
+      {/* Para hoy */}
+      <Label right={forToday.length ? <span className="num">{pendingToday === 0 ? 'todo hecho' : `${pendingToday} pendiente${pendingToday === 1 ? '' : 's'}`}</span> : undefined}>Para hoy</Label>
+      {forToday.length === 0 ? (
         <EmptyState
           icon="moon"
           title={view.restToday ? 'Día de descanso' : 'Sin misiones hoy'}
@@ -165,26 +169,27 @@ export function TodayScreen() {
             ) : undefined
           }
         />
-      ) : null}
-
-      {/* Después */}
-      {later.length > 0 && (
+      ) : (
         <>
-          <Label right={`${later.length} misión${later.length === 1 ? '' : 'es'}`}>{active ? 'Después' : 'Hoy'}</Label>
-          <div className="card tight list">
-            {later.map((t) => (
-              <LaterRow key={`${t.mission.id}:${t.day}`} item={t} onPhoto={(f) => onPhoto(t, f)} />
-            ))}
-          </div>
+          {active && <ActiveMission item={active} onPhoto={(f) => onPhoto(active, f)} fallen={p.status === 'fallen'} resurrectionId={ctx.resurrection?.missionId} />}
+          {rows.length > 0 && (
+            <div className="card tight list">
+              {rows.map((t) => (
+                <MissionRow key={`${t.mission.id}:${t.day}`} item={t} onPhoto={(f) => onPhoto(t, f)} />
+              ))}
+            </div>
+          )}
+          {!active && pendingToday > 0 && <div className="s" style={{ margin: '-6px 4px 0' }}>Cada misión abre a su hora. El anillo del icono es el tiempo que queda antes de perder un corazón.</div>}
         </>
       )}
 
+      {/* Esta semana */}
       {view.weekly.length > 0 && (
         <>
-          <Label right={`${view.weekly.length}`}>Semanales</Label>
+          <Label right={<span className="num">{weeklyPending === 0 ? 'completas' : `${weeklyPending} por cumplir`}</span>}>Esta semana</Label>
           <div className="card tight list">
             {view.weekly.map((t) => (
-              <LaterRow key={t.mission.id} item={t} onPhoto={(f) => onPhoto(t, f)} />
+              <MissionRow key={t.mission.id} item={t} onPhoto={(f) => onPhoto(t, f)} weekly />
             ))}
           </div>
         </>
@@ -274,41 +279,41 @@ export function TodayScreen() {
   );
 }
 
-function stateShort(item: TodayItem): string {
-  if (item.state === 'active' && item.window.minutesLeft !== null) return `Quedan ${minutesToHuman(item.window.minutesLeft)}`;
-  if (item.state === 'grace' && item.window.minutesLeft !== null) return `En gracia · ${minutesToHuman(item.window.minutesLeft)}`;
-  if (item.state === 'allDay') return 'Todo el día';
-  return '';
+function missionIcon(m: TodayItem['mission']) {
+  return m.moduleId === 'gym' ? ('dumbbell' as const) : ATTR_ICON[m.attribute];
 }
 
 function ActiveMission({ item, onPhoto, fallen, resurrectionId }: { item: TodayItem; onPhoto: (f: File) => Promise<void>; fallen?: boolean; resurrectionId?: string }) {
   const m = item.mission;
-  const w = windowFor(m.schedule, weekdayOf(item.day));
   const mod = getModule(m.moduleId);
   const isRes = fallen && resurrectionId === m.id;
-  let progress = 0;
-  if (w !== 'allDay' && item.window.minutesLeft !== null) {
-    const total = Math.max(1, parseHHmm(w.end) - parseHHmm(w.start));
-    progress = Math.max(0, Math.min(100, Math.round(((total - item.window.minutesLeft) / total) * 100)));
-  }
+  const ring = ringFor(item);
+  const what = whatToDo(m);
+  const tone = ring.tone === 'mute' ? 'var(--color-dim)' : ring.tone === 'xp' ? 'var(--color-xp)' : ring.tone === 'gold' ? 'var(--color-gold)' : 'var(--color-hp)';
   return (
     <div className="card active">
       <div className="row">
-        <IconSquare icon={m.moduleId === 'gym' ? 'dumbbell' : ATTR_ICON[m.attribute]} color={ATTR_VAR[m.attribute]} />
+        <TimeRing fraction={ring.fraction} tone={ring.tone} label={ring.long}>
+          <IconSquare icon={missionIcon(m)} color={ATTR_VAR[m.attribute]} />
+        </TimeRing>
         <div className="grow">
           <Link to={`/missions/${m.id}`} className="t" style={{ color: 'inherit', textDecoration: 'none', display: 'block' }}>
             {m.name}
           </Link>
-          <div className="s">
-            {m.anchor ? `${m.anchor} · ` : ''}
-            {w === 'allDay' ? 'Todo el día' : `${w.start} – ${w.end}`}
-            {item.state === 'grace' && ' · 50 % XP, sin daño'}
+          <div className="s" style={{ color: tone }}>
+            <span className="tleft">{ring.long}</span>
             {isRes && ' · resurrección'}
           </div>
         </div>
         <Chip color="var(--color-xp)">+{m.xp} XP</Chip>
       </div>
-      {w !== 'allDay' && <Bar className="mt-4" value={progress} thin color={item.state === 'grace' ? 'var(--color-gold)' : 'var(--color-xp)'} />}
+      {what && <div className="what mt-3">{what}</div>}
+      <div className="s mt-1">
+        {m.anchor ? `${m.anchor} · ` : ''}
+        {windowText(item.window.window)}
+        {m.evidenceHint ? ` · Prueba: ${m.evidenceHint}` : ''}
+        {m.origin === 'agenda' ? ' · Agenda' : ''}
+      </div>
       <div className="mt-4">
         {mod?.executionView && m.moduleId === 'gym' ? (
           <Link to={`/gym/session/${m.id}`} className="btn ember breathe">
@@ -320,23 +325,17 @@ function ActiveMission({ item, onPhoto, fallen, resurrectionId }: { item: TodayI
             Foto y completar
           </CameraButton>
         )}
-        {m.evidenceHint && <div className="s mt-2 text-center">Prueba: {m.evidenceHint}</div>}
       </div>
     </div>
   );
 }
 
-function LaterRow({ item, onPhoto }: { item: TodayItem; onPhoto: (f: File) => Promise<void> }) {
+function MissionRow({ item, onPhoto, weekly }: { item: TodayItem; onPhoto: (f: File) => Promise<void>; weekly?: boolean }) {
   const m = item.mission;
-  const sub = {
-    done: `Hecha${item.completion ? ` · ${item.completion.completedAt.slice(11, 16)}` : ''}`,
-    upcoming: `Abre en ${item.window.minutesUntilOpen !== null ? minutesToHuman(item.window.minutesUntilOpen) : ''}`,
-    active: `Quedan ${item.window.minutesLeft !== null ? minutesToHuman(item.window.minutesLeft) : ''}`,
-    grace: `En gracia · ${item.window.minutesLeft !== null ? minutesToHuman(item.window.minutesLeft) : ''}`,
-    expired: 'Vencida',
-    allDay: 'Todo el día',
-    failed: 'Vencida · corazón descontado',
-  }[item.state];
+  const ring = ringFor(item);
+  const what = whatToDo(m, 80);
+  const inactive = item.state === 'expired' || item.state === 'failed';
+  const toneVar = ring.tone === 'xp' ? 'var(--color-xp)' : ring.tone === 'gold' ? 'var(--color-gold)' : ring.tone === 'hp' ? 'var(--color-hp)' : 'var(--color-dim)';
   // Adelantarse cuenta como a tiempo (el core lo permite): las próximas también se pueden completar.
   const canComplete = item.state === 'active' || item.state === 'grace' || item.state === 'allDay' || item.state === 'upcoming';
   const right =
@@ -345,7 +344,7 @@ function LaterRow({ item, onPhoto }: { item: TodayItem; onPhoto: (f: File) => Pr
         Hecha
       </Chip>
     ) : canComplete ? (
-      <CameraButton onPhoto={onPhoto} allowGallery={false} className="btn sm auto" >
+      <CameraButton onPhoto={onPhoto} allowGallery={false} className="btn sm auto">
         Foto y completar
       </CameraButton>
     ) : (
@@ -353,13 +352,36 @@ function LaterRow({ item, onPhoto }: { item: TodayItem; onPhoto: (f: File) => Pr
         +{m.xp} XP
       </span>
     );
+  const schedule = weekly && item.weeklyProgress ? `${item.weeklyProgress.done}/${item.weeklyProgress.target} esta semana · cuando quieras` : windowText(item.window.window);
+  const icon = <IconSquare icon={missionIcon(m)} color={inactive ? 'var(--color-mute)' : ATTR_VAR[m.attribute]} size="sm" />;
   return (
     <Row
-      icon={m.moduleId === 'gym' ? 'dumbbell' : ATTR_ICON[m.attribute]}
-      color={item.state === 'expired' || item.state === 'failed' ? 'var(--color-mute)' : ATTR_VAR[m.attribute]}
-      title={m.name}
+      leading={
+        !weekly && ring.show ? (
+          <TimeRing fraction={ring.fraction} tone={ring.tone} label={ring.long}>
+            {icon}
+          </TimeRing>
+        ) : (
+          icon
+        )
+      }
+      title={
+        <span className="row" style={{ gap: 6 }}>
+          <span className="truncate">{m.name}</span>
+          {m.origin === 'agenda' && <Chip color="var(--color-system)">Agenda</Chip>}
+        </span>
+      }
       strike={item.state === 'done'}
-      sub={item.weeklyProgress ? `${item.weeklyProgress.done}/${item.weeklyProgress.target} esta semana` : sub}
+      sub={
+        <>
+          {what && item.state !== 'done' && <div className="what">{what}</div>}
+          <div>
+            <span style={{ color: item.state === 'done' ? undefined : toneVar }}>{weekly && item.state !== 'done' ? '' : ring.text}</span>
+            {weekly && item.state !== 'done' ? schedule : ` · ${schedule}`}
+            {m.evidenceHint && item.state !== 'done' ? ` · Prueba: ${m.evidenceHint}` : ''}
+          </div>
+        </>
+      }
       right={right}
       to={`/missions/${m.id}`}
     />

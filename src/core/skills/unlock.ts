@@ -3,7 +3,7 @@ import { SKILL_TREE, type SkillNode } from '@/lib/game-balance';
 import { batch, commitSoon, playerRef, subDoc, clean } from '@/core/repo';
 import { buildLogEntry, logInBatch } from '@/lib/systemLog';
 import { nowIso } from '@/lib/ids';
-import { SKILL_TEXTS } from '@/data/skillTree';
+import { SKILL_TEXTS, BRANCH_TEXTS } from '@/data/skillTree';
 
 export interface NodeStatus {
   node: SkillNode;
@@ -18,7 +18,7 @@ export function nodeStatus(ctx: GameContext, node: SkillNode): NodeStatus {
   if (!unlocked) {
     if (ctx.player.level.skillPointsAvailable < node.cost) reasons.push(`Necesitas ${node.cost} punto${node.cost > 1 ? 's' : ''} de habilidad`);
     if (node.minLevel && ctx.player.level.current < node.minLevel) reasons.push(`Nivel general ${node.minLevel}`);
-    if (node.minAttrLevel && node.branch !== 'trunk' && ctx.player.attributes[node.branch].level < node.minAttrLevel) reasons.push(`${node.branch} nivel ${node.minAttrLevel}`);
+    if (node.minAttrLevel && node.branch !== 'trunk' && ctx.player.attributes[node.branch].level < node.minAttrLevel) reasons.push(`Requiere ${BRANCH_TEXTS[node.branch].name} nivel ${node.minAttrLevel} (vas en ${ctx.player.attributes[node.branch].level})`);
     for (const req of node.requires ?? []) if (!ctx.skills.includes(req)) reasons.push(`Requiere "${SKILL_TEXTS[req]?.name ?? req}"`);
   }
   return { node, unlocked, available: !unlocked && reasons.length === 0, reasons };
