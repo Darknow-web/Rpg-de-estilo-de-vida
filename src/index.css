@@ -331,6 +331,12 @@ textarea.input, .input.ta { min-height: 88px; padding: 12px 14px; }
 .wb.over .col i { background: var(--color-ember); }
 .wb .m { font: 600 11px/1 var(--font-sans); color: var(--color-dim); }
 .wb.over .m { color: var(--color-ember); }
+/* tutorial: tarjetas deslizables */
+.tut { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; gap: 0; margin: 0 -16px; padding: 4px 0; }
+.tut::-webkit-scrollbar { display: none; }
+.tut-slide { flex: 0 0 100%; scroll-snap-align: center; padding: 0 16px; box-sizing: border-box; }
+.tut-dot { height: 6px; border-radius: 99px; border: 0; padding: 0; cursor: pointer; transition: width 0.2s, background 0.2s; }
+
 .dots30 { display: grid; grid-template-columns: repeat(15, 1fr); gap: 5px; }
 .dots30 i { aspect-ratio: 1; border-radius: 4px; background: var(--color-track); }
 .dots30 i.ok { background: var(--color-xp); }

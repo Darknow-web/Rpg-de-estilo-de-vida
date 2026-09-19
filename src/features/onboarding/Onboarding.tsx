@@ -80,7 +80,7 @@ export function Onboarding() {
         regenerationsUsed: regen,
         redo,
       });
-      navigate('/', { replace: true });
+      navigate(redo || player.flags.tutorialDone ? '/' : '/tutorial?first=1', { replace: true });
     } finally {
       setBusy(false);
     }

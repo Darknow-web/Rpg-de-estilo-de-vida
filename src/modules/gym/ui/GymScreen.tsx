@@ -14,6 +14,7 @@ import { Sheet } from '@/components/ui/Sheet';
 import { scanGymPhotos, GymScanUnavailable, GYM_SCAN, type GymScanResult } from '../scan';
 import { Icon, type IconId } from '@/components/ui/Icon';
 import { Card, Chip, IconSquare, Label, Notice, PageHead } from '@/components/ui/primitives';
+import { HowItWorks } from './HowItWorks';
 
 /**
  * Módulo gimnasio: 1) tipo de gimnasio → equipamiento (chips o fotos reconocidas por IA), 2) disponibilidad
@@ -57,6 +58,7 @@ export function GymScreen() {
       <div className="head center">
         <span className="title">Gimnasio</span>
       </div>
+      <HowItWorks defaultOpen={!g.profile} />
       {g.profile && (
         <div className="grid grid-cols-3 gap-1.5">
           {(
@@ -458,6 +460,9 @@ function RoutineView({ onRegenerate, busy }: { onRegenerate: () => Promise<void>
         </Notice>
       )}
       <Label right={`${r.sessions.length} sesiones`}>Esta semana</Label>
+      <p className="s" style={{ margin: '-6px 4px 0' }}>
+        Cada sesión es tu misión de gimnasio del día: ábrela a su hora, registra series y peso, y cierra con foto. Al consolidarla, el Sistema propondrá subir series o peso.
+      </p>
       {r.sessions.map((s) => (
         <Card key={s.index}>
           <div className="row">

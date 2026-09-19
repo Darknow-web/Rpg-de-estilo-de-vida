@@ -72,6 +72,15 @@ try {
   if (dailyCount !== 1) fail(`no se encontró la sección de misiones diarias (${dailyCount})`);
   await page.getByRole('button', { name: /Aceptar y empezar/ }).click();
 
+  // Tutorial de bienvenida (6 tarjetas): se recorre con "Siguiente" y se cierra con "Empezar a jugar"
+  await page.getByText('Antes de empezar').waitFor({ timeout: 20000 });
+  await shot('tutorial');
+  for (let k = 0; k < 5; k++) {
+    await page.getByRole('button', { name: 'Siguiente' }).click();
+    await page.waitForTimeout(350);
+  }
+  await page.getByRole('button', { name: 'Empezar a jugar' }).click();
+
   // Hoy
   await page.getByText(/^Buen(os|as) (días|tardes|noches),$/).waitFor({ timeout: 20000 });
   await shot('today');

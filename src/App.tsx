@@ -5,6 +5,7 @@ import { auth, firebaseConfigured } from '@/lib/firebase';
 import { useGame } from '@/state/game';
 import { AuthScreen } from '@/features/auth/AuthScreen';
 import { Onboarding } from '@/features/onboarding/Onboarding';
+import { Tutorial } from '@/features/onboarding/Tutorial';
 import { Shell } from '@/components/Shell';
 import { TodayScreen } from '@/features/today/TodayScreen';
 import { WeekScreen } from '@/features/week/WeekScreen';
@@ -111,6 +112,8 @@ export default function App() {
     );
   if (!playerLoaded || !player) return <Splash label="Abriendo tu hoja de personaje…" />;
   if (!player.flags.onboardingDone && !location.pathname.startsWith('/onboarding')) return <Navigate to="/onboarding" replace />;
+  // Tutorial de bienvenida una sola vez (también para quien ya jugaba antes de que existiera).
+  if (player.flags.onboardingDone && !player.flags.tutorialDone && !location.pathname.startsWith('/tutorial') && !location.pathname.startsWith('/onboarding')) return <Navigate to="/tutorial?first=1" replace />;
 
   return (
     <>
@@ -120,6 +123,7 @@ export default function App() {
       )}
       <Routes>
         <Route path="/onboarding" element={<Onboarding />} />
+        <Route path="/tutorial" element={<Tutorial />} />
         <Route element={<Shell />}>
           <Route path="/" element={<TodayScreen />} />
           <Route path="/week" element={<WeekScreen />} />
