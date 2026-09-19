@@ -28,7 +28,7 @@ let base = '';
 
 beforeAll(async () => {
   const app = express();
-  // Igual que server/index.ts: el parser global NO se aplica a /api/ai/gym-scan; el router trae el suyo.
+  // Igual que server.ts: el parser global NO se aplica a /api/ai/gym-scan; el router trae el suyo.
   const jsonSmall = express.json({ limit: '256kb' });
   app.use((req, res, next) => (req.path === '/api/ai/gym-scan' ? next() : jsonSmall(req, res, next)));
   app.use('/api/ai', aiRouter);

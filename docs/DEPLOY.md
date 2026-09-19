@@ -50,8 +50,8 @@ Si más adelante activas Blaze y quieres Storage real:
 ## 4. Secreto de la Gemini API
 
 - Al crear el app desde AI Studio, `GEMINI_API_KEY` se configura sola como secreto del **servidor** (nunca llega al cliente). Si importaste el repo y no está, ve a Ajustes del app → **Secrets / Environment variables** → agrega `GEMINI_API_KEY` con una clave de [aistudio.google.com/apikey](https://aistudio.google.com/apikey).
-- Opcional: `GEMINI_MODEL` para cambiar el modelo (por defecto `gemini-2.5-flash-lite`, el Flash más barato con salida estructurada).
-- El servidor limita por usuario y día: 12 onboardings, 40 tasaciones, 30 propuestas, 30 interpretaciones de disponibilidad. Con la cuota gratuita de la Gemini API sobra para uso personal.
+- Opcional: `GEMINI_MODEL` para fijar el modelo; si falla, el servidor prueba los demás de la lista de `server/ai/model.ts`.
+- El servidor limita por usuario y día: 12 onboardings, 40 tasaciones, 30 propuestas, 30 interpretaciones de disponibilidad, 10 escaneos de gimnasio, 10 fotos de pendientes y 20 planificaciones. Con la cuota gratuita de la Gemini API sobra para uso personal.
 
 ## 5. Web Push (opcional)
 
@@ -69,7 +69,7 @@ El módulo **Agenda** lee tu Google Calendar y escribe en él **solo las tareas 
 1. **Habilitar la API:** [console.cloud.google.com](https://console.cloud.google.com) → selecciona el proyecto que creó Firebase/AI Studio → **APIs y servicios → Biblioteca** → busca **Google Calendar API** → **Habilitar**.
 2. **Pantalla de consentimiento OAuth:** **APIs y servicios → Pantalla de consentimiento OAuth** (o *Google Auth Platform → Público*). Tipo de usuario **Externo**, estado de publicación **Testing** (en pruebas). En **Usuarios de prueba** añade el correo del jugador (el mismo con el que inicia sesión). Con la app en Testing no necesitas verificación de Google; el permiso dura hasta que lo revoques, con un aviso de "app no verificada" que se acepta una vez.
 3. **Orígenes autorizados:** **APIs y servicios → Credenciales** → abre el cliente OAuth 2.0 de tipo *Aplicación web* que Firebase creó automáticamente (suele llamarse *Web client (auto created by Google Service)*). En **Orígenes de JavaScript autorizados** añade:
-   - `http://localhost:5173`
+   - `http://localhost:3000` (desarrollo local)
    - la URL de tu servicio en Cloud Run (`https://<servicio>.run.app`)
    No hace falta ningún *URI de redirección*: el modelo de token de GIS usa una ventana emergente.
 4. **Client ID:** copia el **ID de cliente** (termina en `.apps.googleusercontent.com`) a la variable `VITE_GOOGLE_CLIENT_ID` (`.env` en local; variables de entorno del app en AI Studio para Cloud Run). Es una variable pública del cliente, no un secreto.

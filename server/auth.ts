@@ -51,10 +51,15 @@ export async function verifyIdToken(token: string): Promise<string> {
     if (!payload.sub) throw new Error('token sin sub');
     return payload.sub;
   } catch (err) {
-    // Si la llamada JWKS o verificación falla por red/tiempo pero el token es estructuralmente válido
+    // Un error de jose (firma inválida, token vencido, audiencia/emisor distintos, kid desconocido) es un
+    // token NO válido: se rechaza siempre. Solo si no se pudo descargar el JWKS (red caída al arrancar en
+    // frío) se acepta un token estructuralmente válido para este proyecto, y queda avisado en el registro.
+    const code = (err as { code?: string }).code ?? '';
+    if (code.startsWith('ERR_J')) throw err;
     const decoded = decodeJwt(token);
-    if (decoded && decoded.sub && (decoded.aud === pid || decoded.iss?.includes(pid))) {
-      console.warn('[auth] advertencia: jwtVerify falló pero decoded token es válido para', decoded.sub);
+    const fresh = typeof decoded.exp === 'number' && decoded.exp * 1000 > Date.now();
+    if (decoded.sub && fresh && decoded.aud === pid && decoded.iss === `https://securetoken.google.com/${pid}`) {
+      console.warn('[auth] JWKS inalcanzable; se acepta un token sin verificar firma para', decoded.sub);
       return decoded.sub;
     }
     throw err;

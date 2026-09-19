@@ -118,7 +118,7 @@ aiRouter.post(
 
 // ── Escaneo de gimnasio: hasta 4 fotos (base64) → equipamiento del catálogo ──
 // Las fotos NO se guardan: viajan en la petición, se envían a la IA y se descartan.
-// Body propio: 4 × ~267k caracteres de base64 supera el límite global de 256 KB (server/index.ts lo omite para esta ruta).
+// Body propio: 4 × ~267k caracteres de base64 supera el límite global de 256 KB (server.ts lo omite para esta ruta).
 export const GYM_SCAN_BODY_LIMIT = '1500kb';
 
 /** Detecta el tipo por la cabecera del base64; si no reconoce, asume JPEG (lo que produce el cliente). */
@@ -155,7 +155,7 @@ aiRouter.post(
 );
 
 // ── Agenda inteligente ──
-/** Rutas cuyo cuerpo lleva una imagen en base64: el parser global de 256 KB no se aplica (server/index.ts). */
+/** Rutas cuyo cuerpo lleva una imagen en base64: el parser global de 256 KB no se aplica (server.ts). */
 export const IMAGE_ROUTES = ['/api/ai/gym-scan', '/api/ai/tasks-from-photo'] as const;
 
 // Foto de una lista de pendientes → tareas. La foto no se guarda: viaja, se envía a la IA y se descarta.

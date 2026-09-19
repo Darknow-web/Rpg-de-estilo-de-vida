@@ -5,7 +5,7 @@ Una PWA (instalable en Android) que convierte tu vida en un RPG: las misiones so
 - **Frontend:** React 19 + Vite 7 + TypeScript + Tailwind 4, PWA con service worker (offline + Web Push).
 - **Backend:** Express (`server/`) que sirve el cliente y expone `/api/*`. La clave de Gemini vive **solo** aquí.
 - **Datos:** Firebase Auth (Google + correo) y Cloud Firestore (con caché offline). Las fotos se guardan comprimidas como bytes en Firestore (ver "Fotos").
-- **IA:** Gemini (`gemini-2.5-flash-lite` por defecto) con salida estructurada validada con Zod. Tres llamadas: onboarding, tasador de recompensas, propuesta de misión nueva (más una auxiliar para interpretar disponibilidad). **Todo tiene fallback local: la app nunca se bloquea por un fallo de la IA.**
+- **IA:** Gemini (modelo de `GEMINI_MODEL` o la lista de respaldo de `server/ai/model.ts`) con salida estructurada validada con Zod. Llamadas: onboarding, tasador de recompensas, propuesta de misión nueva, interpretación de disponibilidad, escaneo del gimnasio, lista de pendientes por foto y planificador de la semana. **Todo tiene fallback local: la app nunca se bloquea por un fallo de la IA.**
 - **Despliegue:** Google AI Studio → Cloud Run (capa Starter, sin cuenta de facturación). Pasos en [`docs/DEPLOY.md`](docs/DEPLOY.md).
 
 ## Instalación local
@@ -13,7 +13,7 @@ Una PWA (instalable en Android) que convierte tu vida en un RPG: las misiones so
 ```bash
 npm install
 cp .env.example .env      # completa VITE_FIREBASE_* (y GEMINI_API_KEY si quieres IA en local)
-npm run dev               # cliente en http://localhost:5173, servidor /api en :8080
+npm run dev               # servidor + cliente (Vite en modo middleware) en http://localhost:3000
 ```
 
 Sin `GEMINI_API_KEY`, la app funciona con los sets locales de respaldo (campañas por arquetipo, tasador por palabras clave, banco de misiones).
@@ -32,7 +32,7 @@ VITE_USE_EMULATORS=1 npm run dev
 | Comando | Qué hace |
 |---|---|
 | `npm run dev` | Cliente Vite + servidor Express con recarga |
-| `npm run build` | Typecheck + build del cliente (`dist/`) + bundle del servidor (`dist-server/`) |
+| `npm run build` | Typecheck + build del cliente (`dist/`) + bundle del servidor (`dist/server.cjs`) |
 | `npm start` | Sirve `dist/` y `/api` (lo que ejecuta Cloud Run) |
 | `npm test` | Pruebas unitarias del core (curva de XP, economía, cupo, dominio, tasador, generador de rutina, tiempo) |
 | `npm run test:rules` | Pruebas de las reglas de Firestore contra el emulador (aislamiento entre jugadores, inmutabilidad) |
