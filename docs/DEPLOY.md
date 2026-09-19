@@ -2,6 +2,23 @@
 
 Flujo: escribes y pruebas en local → push a GitHub → AI Studio trae el repo desde la pestaña GitHub → despliegas a Cloud Run con un clic.
 
+## 0. Lanzamiento rápido (checklist)
+
+La rama a importar es **`claude/new-session-2a15nj`** (es la única del repo y la rama por defecto). El código ya está construido y probado; los pasos siguientes se hacen con tu cuenta de Google.
+
+| # | Dónde | Qué |
+|---|---|---|
+| 1 | AI Studio → Build → New app → **+** → **Import from GitHub** | Elige `Darknow-web/Rpg-de-estilo-de-vida`. Comandos si los pide: dev `npm run dev` · build `npm run build` · start `npm start`. |
+| 2 | Chat de AI Studio | Pide *"Enable Firebase: Firestore + Authentication (Google y correo/contraseña)"* y acepta la tarjeta **Enable Firebase**. |
+| 3 | Ajustes del app → variables de entorno | Cliente: `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`, `VITE_FIREBASE_APP_ID`, `VITE_FIREBASE_MESSAGING_SENDER_ID`. Servidor: `FIREBASE_PROJECT_ID` (mismo id) y `GEMINI_API_KEY` (secreto). Opcionales: `VITE_GOOGLE_CLIENT_ID` (Agenda, sección 6) y las VAPID (sección 5). Sin `GEMINI_API_KEY` la app funciona con los sets locales. |
+| 4 | Firebase Console → Firestore → Reglas | Pega `firestore.rules` y publica. Nunca modo de prueba abierto. |
+| 5 | Firebase Console → Authentication → Sign-in method | Habilita **Google** y **Correo/contraseña**. |
+| 6 | AI Studio → **Deploy → Deploy to Cloud Run** | Usa el `Dockerfile` del repo. Anota la URL `https://<servicio>.run.app`. |
+| 7 | Firebase Console → Authentication → Dominios autorizados | Agrega ese dominio `run.app` (si no, el login con Google falla). |
+| 8 | Android → Chrome → la URL → menú → **Instalar app** | Listo. Cada cambio: `git push` → AI Studio → GitHub → **Pull** → **Deploy**. |
+
+Los índices de Firestore se crean desde el enlace que muestra la consola del navegador la primera vez que hacen falta (o importando `firestore.indexes.json`). El arte generado (medallas, rangos) se integra después sin tocar nada de esto: son archivos estáticos en `public/art/`.
+
 ## 1. Crear el proyecto en AI Studio e importar el repo
 
 1. Entra a [aistudio.google.com](https://aistudio.google.com) → **Build** → **+ New app** (o abre el prompt vacío).
