@@ -82,9 +82,20 @@ un código y ver quién está dentro.
 - Crea `server/firestore.ts` que exporte:
   - `DATABASE_ID: string` — de `process.env.FIRESTORE_DATABASE_ID`; si no, del campo
     `firestoreDatabaseId` de `firebase-applet-config.json`; si no, `'(default)'`.
-  - `adminDb(): Firestore | null` — inicializa de forma perezosa con `initializeApp()` SIN argumentos
-    (en Cloud Run toma las credenciales del entorno) y devuelve `getFirestore(app, DATABASE_ID)`.
-    Si algo falla, registra el error y devuelve `null`. NUNCA lanza.
+  - `adminDb(): Firestore | null` — inicializa de forma perezosa y devuelve el cliente. NUNCA lanza:
+    si algo falla, registra el error y devuelve `null`. La forma exacta es esta y NO otra:
+
+        const { getApps, initializeApp, applicationDefault } = await import('firebase-admin/app');
+        const { getFirestore } = await import('firebase-admin/firestore');
+        const app = getApps().find(a => a.name === 'league')
+          ?? initializeApp({ credential: applicationDefault(), projectId }, 'league');
+        const db = getFirestore(app, DATABASE_ID);   // DOS argumentos, siempre
+
+    Cuidado con las sobrecargas de `getFirestore`: `getFirestore(app)` compila perfectamente y apunta
+    en silencio a la base `(default)`, que en este proyecto existe pero esta VACIA. Y `getFirestore(id)`
+    con un solo string tambien compila, pero usa la app por defecto en vez de la tuya. Siempre las dos.
+    Usa `await import(...)` dentro del try, no un import estatico arriba: asi, si la dependencia no
+    quedo instalada, el servidor degrada con `reason: 'no_admin_sdk'` en vez de reventar al arrancar.
   - `firestoreStatus(): Promise<{ ok: boolean; databaseId: string; reason?: string }>` — hace una
     lectura trivial y dice si funciono.
 - EL SERVIDOR DEBE ARRANCAR IGUAL SIN CREDENCIALES. Nada de `process.exit`. Si no hay acceso, las rutas
@@ -193,6 +204,11 @@ codigo de exactamente 6 caracteres del alfabeto permitido) y reutiliza el patron
 - `README.md`: la nota que dice que la logica corre en el cliente y da igual "sin ranking ni social".
   Explica ahora que las puntuaciones de liga las calcula el servidor desde el historial con foto, y que
   por eso nadie puede escribirse su posicion.
+- `firestore.rules`: BORRA el bloque `match /public_profiles/{uid}`. Esta reservado "para funciones
+  sociales futuras" y no se usa en ningun sitio; las ligas NO se construyen sobre el (el nombre para
+  mostrar lo copia el servidor a `leagues/{id}/members/{uid}`). Dejarlo ahi es una invitacion a que
+  alguien lo abra mas adelante creyendo que hace falta. Al borrarlo, en el test de reglas la linea que
+  hace `assertSucceeds` sobre `public_profiles/alice` pasa a ser `assertFails`.
 - `docs/SYSTEM-LOG.md`: añade las filas de lo que el sistema hace solo con las ligas.
 - `tests/rules/firestore.rules.test.ts`: añade un bloque que compruebe que un no miembro no lee la liga,
   que un miembro si la lee, y que NADIE puede escribir en `leagues` desde el cliente. Para preparar los
@@ -240,7 +256,16 @@ opciones de ganar, y nadie gana por llenarse la bitacora de misiones triviales.
 
 ## El algoritmo, con precision
 
-Crea `server/league/score.ts` con una funcion PURA y testeable:
+ANTES DE NADA, un detalle que rompe la compilacion: `tsconfig.server.json` solo incluye
+`["server.ts", "server", "src/shared", "src/lib/game-balance.ts"]`. El calculo necesita `isScheduledOn`,
+`windowFor` y `weekdayOf` de `src/lib/time.ts`, asi que **añade `"src/lib/time.ts"` a ese `include`** o
+`npm run typecheck` fallara. Ese archivo solo usa `Intl` y `Date`, es seguro en Node.
+
+Pon la funcion de calculo en `src/shared/league/score.ts` (compartida, pura, sin React ni Firebase) y
+que `server/league/score.ts` solo la envuelva leyendo datos. Asi el cliente puede explicar TU propia
+fila con el mismo codigo, sin que existan dos implementaciones que acaben discrepando.
+
+La funcion PURA y testeable:
 
     computePlayerScore(input: {
       missions: Mission[];
@@ -284,8 +309,14 @@ la semana, aparece en la tabla pero sin puesto, con la nota "necesita al menos N
 Desempate, en este orden: mas dias contados, mas misiones cumplidas, y por ultimo el uid, para que el
 resultado sea siempre el mismo.
 
+CONGELA LA ZONA HORARIA de cada miembro al entrar en la liga, guardandola en su documento de miembro, y
+usa esa y no `player.profile.timezone`. El jugador puede cambiar su zona horaria cuando quiera, y
+cambiarla corre el dia logico: seria regalarse un dia. Por la misma razon, el limite de "dia cerrado"
+se calcula con la zona de la liga mas las horas de gracia, NUNCA con `player.streak.lastProcessedDay`,
+que es un campo que el cliente escribe y puede retrasar para sacar un mal dia del denominador.
+
 Añade a `LEAGUE` en `game-balance.ts`: `maxMissionsCountedPerDay: 8`, `minScheduledPerWeek: 5`,
-`recomputeMinutes: 30`.
+`syncCooldownMinutes: 15`, `maxReadsPerRequest: 400`.
 
 ## La trampa que NO vamos a perseguir, y como se compensa
 
@@ -298,15 +329,31 @@ mas barata que la vigilancia.
 Documenta esto en un comentario al principio de `server/league/score.ts`, junto con la lista de lo que
 si se filtra. Que quien lea el codigo dentro de seis meses sepa que fue una decision, no un descuido.
 
-## Cache y coste
+## Cache y coste: recalcula SOLO la fila de quien pregunta
 
-Recalcular una liga de 6 personas cuesta unas 360 lecturas de Firestore. Guarda el resultado en
-`leagues/{id}/scores/{uid}` con `actualizadoEn`, y recalcula solo si han pasado mas de
-`LEAGUE.recomputeMinutes` desde la ultima vez. La ruta `GET /api/league/:id/table` devuelve el cache si
-esta fresco y recalcula si no, con `rateLimit('league-table', 120)`. Incluye en la respuesta cuando se
-calculo, para poder mostrarlo.
+Echa la cuenta antes de escribir nada. Recalcular un miembro cuesta ~80 lecturas (su jugador, sus
+misiones, sus completaciones de la semana y las evidencias que hay que comprobar). Recalcular la liga
+entera de 6 personas son ~480. Si haces eso cada 30 minutos son 23 000 lecturas al dia PARA UNA SOLA
+LIGA: casi la mitad de la cuota gratuita diaria de TODA la app. No sirve.
 
-Nunca recalcules en un bucle ni al arrancar el servidor: solo cuando alguien abre la pantalla.
+Hazlo asi:
+
+- `POST /api/league/:id/sync-me` recalcula **solo la fila del que llama** y despues reconstruye el
+  documento de tabla leyendo las 6 filas ya guardadas. Coste: ~86 lecturas, no 480.
+- Cooldown por miembro de `LEAGUE.syncCooldownMinutes` (15), guardado EN FIRESTORE junto a su fila, no
+  en memoria: `rateLimit()` es un `Map` del proceso, se pierde al reiniciar y no se comparte entre
+  instancias de Cloud Run, asi que no sirve para esto.
+- `GET /api/league/:id/table` NO recalcula nunca: devuelve el documento ya guardado, 1 lectura.
+- La pantalla llama a `sync-me` al abrirse; si esta en cooldown, el servidor responde `{ stale: true }`
+  con 1 lectura y la pantalla muestra la tabla que ya tiene.
+- CORTACIRCUITOS OBLIGATORIO: `LEAGUE.maxReadsPerRequest = 400`. Lleva un contador de lecturas en el
+  modulo que habla con Firestore y aborta devolviendo `reason: 'read_budget'` si se pasa. Sin esto, un
+  fallo en el bucle de dias se come la cuota diaria de toda la app y deja de funcionar el juego entero,
+  no solo las ligas.
+- Muestra siempre en pantalla cuando se calculo ("actualizado hace 12 min"). Una tabla que puede ir
+  quince minutos por detras genera discusiones si no se avisa.
+
+Nunca recalcules en un bucle, ni al arrancar el servidor, ni para todos los miembros a la vez.
 
 ## Pantalla
 
@@ -368,6 +415,29 @@ ninguno sabe la cifra del otro.
 - La IA NO analiza esta foto. Como la de evidencia de cualquier mision, solo prueba ante ti y ante tu
   liga que lo hiciste. Dejalo escrito en el README junto a la excepcion que ya existe para las fotos de
   configuracion del gimnasio.
+- CONGELA LA META al empezar la temporada, guardandola fuera del alcance del cliente (en el documento
+  privado del miembro dentro de la liga). Si el porcentaje se calcula contra la meta que vive en
+  `players/{uid}`, cualquiera la baja a mitad de semana y salta al 100 %.
+- Dilo en la pantalla con todas las letras, no solo en el codigo: una foto de dinero no prueba nada.
+  Se puede fotografiar el mismo fajo diez veces. Lo que el servidor comprueba es que hay una foto de
+  ese dia; lo demas es honor entre amigos. Un texto honesto aqui vale mas que fingir rigor.
+
+## 1.b Sellar la hora de las completaciones (lo que cierra el antedatado)
+
+Hoy alguien puede escribir completaciones con fecha pasada directamente en Firestore. Se cierra asi:
+
+- El cliente empieza a escribir `serverAt: serverTimestamp()` en cada completacion nueva
+  (`src/core/completion/complete.ts`) y en cada registro de sesion de gimnasio.
+- DESPUES, y solo despues de comprobar en produccion durante unos dias que todas las completaciones
+  nuevas llevan ese campo, se publica la regla `allow create: if isOwner(uid) && request.resource.data.serverAt == request.time;`
+  en `completions`.
+- EL ORDEN IMPORTA Y NO ES NEGOCIABLE. Si publicas la regla antes de que el cliente escriba el campo,
+  Firestore rechaza TODAS las completaciones y el juego deja de funcionar para todo el mundo, no solo
+  las ligas.
+- Efecto secundario que hay que asumir y explicar: una completacion que se quedo en cola sin red
+  resuelve su `serverAt` al reconectar. La liga ignora las que llegan mas de `LEAGUE.maxSealDelayHours`
+  (48) despues del cierre de su dia. Quien estuvo tres dias sin conexion conserva su progreso en el
+  juego pero pierde esos dias en la liga. Dilo en la pantalla.
 
 ## 2. Podio de fin de temporada
 
@@ -401,6 +471,8 @@ ninguno sabe la cifra del otro.
 - Aviso push cuando alguien te pasa en la tabla, respetando el tope de 4 avisos al dia que ya existe.
   Como maximo uno de estos al dia, y solo si el jugador tiene la liga visible.
 - Una tarjeta en el tutorial de bienvenida explicando las ligas en tres lineas.
+
+Añade a `LEAGUE` en `game-balance.ts`: `maxSealDelayHours: 48` y los topes del reto de ahorro.
 
 Ejecuta `npm run typecheck`, `npm test` y `npm run build`, y resume que quedo hecho.
 ```
